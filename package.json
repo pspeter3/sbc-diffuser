@@ -4,10 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vp dev",
-    "build": "tsc && vp build",
-    "preview": "vp preview",
-    "prepare": "vp config"
+    "start": "vp dev",
+    "build": "vp build",
+    "config": "vp config",
+    "fix": "vp check --fix",
+    "test:check": "vp check",
+    "test:unit": "vp test",
+    "test": "vp run test:check && vp run test:unit"
   },
   "dependencies": {
     "@picocss/pico": "^2.1.1"
