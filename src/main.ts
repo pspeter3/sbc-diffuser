@@ -1,60 +1,41 @@
-import "./style.css";
+import "./style.scss";
 import heroImg from "./assets/hero.png";
 import typescriptLogo from "./assets/typescript.svg";
 import viteLogo from "./assets/vite.svg";
 import { setupCounter } from "./counter.ts";
 
-document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
-<section id="center">
-  <div class="hero">
-    <img src="${heroImg}" class="base" width="170" height="179">
-    <img src="${typescriptLogo}" class="framework" alt="TypeScript logo"/>
-    <img src="${viteLogo}" class="vite" alt="Vite logo" />
-  </div>
-  <div>
+document.querySelector<HTMLElement>("#app")!.innerHTML = `
+  <header class="intro">
+    <div class="hero" aria-hidden="true">
+      <img src="${heroImg}" class="base" width="170" height="179" alt="" />
+      <img src="${typescriptLogo}" class="framework" alt="" />
+      <img src="${viteLogo}" class="vite" alt="" />
+    </div>
     <h1>Get started</h1>
-    <p>Edit <code>src/main.ts</code> and save to test <code>HMR</code></p>
-  </div>
-  <button id="counter" type="button" class="counter"></button>
-</section>
+    <p>Edit <code>src/main.ts</code> and save to test HMR.</p>
+    <button id="counter" type="button"></button>
+  </header>
 
-<div class="ticks"></div>
-
-<section id="next-steps">
-  <div id="docs">
-    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#documentation-icon"></use></svg>
-    <h2>Documentation</h2>
-    <p>Your questions, answered</p>
-    <ul>
-      <li>
-        <a href="https://vite.dev/" target="_blank">
-          <img class="logo" src="${viteLogo}" alt="" />
-          Explore Vite
-        </a>
-      </li>
-      <li>
-        <a href="https://www.typescriptlang.org" target="_blank">
-          <img class="button-icon" src="${typescriptLogo}" alt="">
-          Learn more
-        </a>
-      </li>
-    </ul>
-  </div>
-  <div id="social">
-    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#social-icon"></use></svg>
-    <h2>Connect with us</h2>
-    <p>Join the Vite community</p>
-    <ul>
-      <li><a href="https://github.com/vitejs/vite" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#github-icon"></use></svg>GitHub</a></li>
-      <li><a href="https://chat.vite.dev/" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#discord-icon"></use></svg>Discord</a></li>
-      <li><a href="https://x.com/vite_js" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#x-icon"></use></svg>X.com</a></li>
-      <li><a href="https://bsky.app/profile/vite.dev" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#bluesky-icon"></use></svg>Bluesky</a></li>
-    </ul>
-  </div>
-</section>
-
-<div class="ticks"></div>
-<section id="spacer"></section>
+  <section class="grid" aria-label="Next steps">
+    <article>
+      <h2>Documentation</h2>
+      <p>Your questions, answered.</p>
+      <div class="resource-links">
+        <a href="https://vite.dev/" role="button" class="outline" target="_blank" rel="noopener noreferrer">Explore Vite</a>
+        <a href="https://www.typescriptlang.org/" role="button" class="outline" target="_blank" rel="noopener noreferrer">Learn TypeScript</a>
+      </div>
+    </article>
+    <article>
+      <h2>Connect with us</h2>
+      <p>Join the Vite community.</p>
+      <div class="resource-links">
+        <a href="https://github.com/vitejs/vite" role="button" class="outline" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <a href="https://chat.vite.dev/" role="button" class="outline" target="_blank" rel="noopener noreferrer">Discord</a>
+        <a href="https://x.com/vite_js" role="button" class="outline" target="_blank" rel="noopener noreferrer">X.com</a>
+        <a href="https://bsky.app/profile/vite.dev" role="button" class="outline" target="_blank" rel="noopener noreferrer">Bluesky</a>
+      </div>
+    </article>
+  </section>
 `;
 
 setupCounter(document.querySelector<HTMLButtonElement>("#counter")!);
