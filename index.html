@@ -2,12 +2,29 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>sbc-diffuser</title>
+    <title>SBC Diffuser</title>
+    <link rel="stylesheet" href="/src/style.scss" />
   </head>
   <body>
-    <main id="app"></main>
-    <script type="module" src="/src/main.ts"></script>
+    <header>
+      <h1>SBC Diffuser</h1>
+    </header>
+
+    <main>
+      <form id="workbook-form">
+        <label for="workbook-file">Workbook (.xlsx)</label>
+        <input
+          id="workbook-file"
+          name="workbook"
+          type="file"
+          accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          aria-describedby="workbook-help"
+          required
+        />
+        <small id="workbook-help"> E*TRADE By Benefit Type workbook. </small>
+        <button type="submit">Import workbook</button>
+      </form>
+    </main>
   </body>
 </html>
