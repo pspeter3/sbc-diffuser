@@ -9,7 +9,7 @@
     "config": "vp config",
     "fix": "vp check --fix",
     "test:check": "vp check",
-    "test:unit": "vp test --passWithNoTests",
+    "test:unit": "vp test",
     "test": "vp run test:check && vp run test:unit"
   },
   "dependencies": {

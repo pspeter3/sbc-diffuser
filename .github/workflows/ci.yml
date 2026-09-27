@@ -17,4 +17,6 @@ jobs:
           node-version: "24"
           cache: true
       - run: vp install
-      - run: npm test
+      - run: vp check
+      - run: vp test
+      - run: vp build
