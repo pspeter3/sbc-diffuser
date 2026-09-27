@@ -1,0 +1,53 @@
+@use "@picocss/pico/scss/pico" with (
+  $theme-color: "indigo",
+  $enable-semantic-container: true
+);
+
+.intro {
+  text-align: center;
+}
+
+.intro button {
+  width: auto;
+}
+
+.hero {
+  position: relative;
+  width: 170px;
+  height: 179px;
+  margin: 0 auto 2rem;
+
+  img {
+    position: absolute;
+    inset-inline: 0;
+    margin: 0 auto;
+  }
+
+  .base {
+    width: 170px;
+  }
+
+  .framework {
+    top: 34px;
+    height: 28px;
+    transform: perspective(2000px) rotateZ(300deg) rotateX(44deg) rotateY(39deg) scale(1.4);
+  }
+
+  .vite {
+    top: 107px;
+    height: 26px;
+    transform: perspective(2000px) rotateZ(300deg) rotateX(40deg) rotateY(39deg) scale(0.8);
+  }
+}
+
+.resource-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+
+  a[role="button"] {
+    width: auto;
+    margin: 0;
+  }
+}
