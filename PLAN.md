@@ -18,9 +18,9 @@ checkboxes do not execute trades or record completed sales.
 ## Scope
 
 The initial version supports the existing E*TRADE By Benefit Type XLSX format and
-one stock symbol per workbook. Reject multiple symbols with an understandable
-message rather than applying one stock price to different securities. Missing or
-inconsistent symbol information must produce a useful validation error.
+multiple stock symbols per workbook, with a separate manually entered USD price
+for each symbol in the RsuLotList. Concentration refers to the combined value of
+workbook RSUs. Missing symbol information must produce a useful validation error.
 
 Plan sales of held RSUs, including blackout-blocked shares. Exclude options and
 unvested RSUs from the sale plan and concentration calculation. Preserve the
@@ -30,7 +30,7 @@ Pending-sale quantities are not added to holdings.
 
 Keep workbook data, parameters, and selections in memory for the initial version.
 Refreshing the page starts a new session. Persistence, other broker formats,
-multiple-stock planning, partial-lot sales, tax calculations, price feeds, and
+partial-lot sales, tax calculations, price feeds, and
 multi-period schedules are outside the initial scope.
 
 ## Screen structure
@@ -50,8 +50,8 @@ Vite+ tooling. A router or UI framework is unnecessary for this flow.
 - On failure, stay on the import screen and let the user choose another file.
 - On success, show the planner with the file name and derived stock symbol.
 
-The current parser expects both `Restricted Stock` and `Options` worksheets,
-including their expected ordered headers. Preserve this supported format unless
+The current parser expects the `Restricted Stock` worksheet and its required
+column headers. Options worksheets are ignored. Preserve this supported format unless
 additional real exports establish a need to accept other shapes.
 
 ### Screen 2: configure and review
@@ -60,13 +60,13 @@ Provide these inputs:
 
 | Input                                         | Meaning                                                        | Validation                        |
 | --------------------------------------------- | -------------------------------------------------------------- | --------------------------------- |
-| Stock price                                   | Assumed price per share in USD                                 | Finite decimal greater than zero  |
+| Stock price per symbol                        | Assumed price per share in USD                                 | Finite decimal greater than zero  |
 | Desired wealth concentration                  | Target percentage held in workbook RSUs after the planned sale | Finite decimal from 0 through 100 |
 | Investable wealth excluding workbook holdings | Non-workbook investable wealth in USD                          | Finite nonnegative decimal        |
 
 Use explicit labels, particularly for wealth, so users do not include workbook
 holdings twice. There is no periods input. Do not prefill personal financial
-assumptions; calculate after all three inputs are valid.
+assumptions; calculate after every stock price, wealth, and concentration input is valid.
 
 Provide a replace-workbook action that returns to the import screen and clears
 the current workbook, parameters, and selection. Move focus appropriately when
@@ -83,7 +83,7 @@ Preserve precision throughout calculations and round only for display or export.
    for every held lot used in recommendations. Report missing data rather than
    inventing a basis or grouping unrelated lots under an unknown date.
 4. Group all held lots sharing the same vest date, including lots from different
-   grants.
+   grants and symbols.
 5. Calculate each group's share-weighted average estimated basis:
    `sum(lot shares × lot basis per share) / sum(lot shares)`.
 6. Rank groups by descending weighted average basis. Break equal-basis ties by
@@ -104,6 +104,9 @@ Let:
 - `T` = desired concentration in percentage points;
 - `V = S × P` = current workbook stock value;
 - `N = W + V` = total modeled investable wealth.
+
+For multiple symbols, sum each lot's shares multiplied by its own symbol's price
+for `V` and selected proceeds; the other formulas remain the same.
 
 Then:
 
@@ -193,7 +196,8 @@ selected. Generate the download locally without a server.
 Use an `Application` class to coordinate app-specific DOM views through explicit
 method calls and user-action callbacks. Keep vanilla TypeScript, Pico CSS,
 persistent HTML, and in-memory session state; no new architectural dependency is
-required. This section specifies future implementation.
+required. The planner follows this architecture; the existing WorkbookFormView continues
+to own asynchronous reading and its duplicate-import guard.
 
 ### Responsibilities
 
@@ -228,8 +232,7 @@ Keep raw field values and displayed validation in the form views. Application
 stores only valid domain parameters; invalid input clears those parameters,
 suppresses calculated results, and disables selection and any implemented export.
 
-Application owns the import-in-progress guard and directs the import form's
-loading state. Failed imports retain the import screen and display useful
+WorkbookFormView owns the import-in-progress guard and its loading state. Failed imports retain the import screen and display useful
 diagnostics. Successful import stores the workbook, initializes the planner
 views, and reveals the planner.
 
@@ -249,7 +252,8 @@ returning focus to the import form.
    through `./node_modules/.bin/vp add <package>` as required.
 2. **Implement grouped planning.** Separate held-lot normalization, vest-date
    grouping and recommendation, and calculations for an arbitrary selection.
-   Use stable grant-number/vest-period identities for checkbox state. Adapt
+   Use stable imported row indices for checkbox state so repeated grant/period
+   records remain independently selectable; retain those indices when sorting. Adapt
    Node-specific or unsupported iterator usage for the project's browser target.
 3. **Build the import flow.** Declare the two persistent screen sections and
    construct `WorkbookFormView` and `Application`. Coordinate import loading,
@@ -272,8 +276,8 @@ synthetic fixtures rather than committing personal workbook contents.
 
 Cover the behaviors that establish correctness:
 
-- Valid workbook import, malformed input diagnostics, arbitrary single symbols,
-  and rejection of multiple symbols.
+- Valid workbook import, malformed input diagnostics, arbitrary symbols,
+  and separate pricing for multiple symbols.
 - Existing quantity semantics, including blocked/sellable alternatives and empty
   holdings.
 - Weighted group ranking, same-date lots across grants, deterministic ties,
