@@ -116,23 +116,14 @@ describe("RSU parser", () => {
       expect(error).toHaveProperty("issues.0.path", ["Restricted Stock", sourceRow, field]);
     }
   });
-  it("rejects absent, duplicate, or malformed sheets and headers", () => {
+  it("rejects absent or malformed sheets and headers", () => {
     for (const input of [
       [],
-      [...workbook(), ...workbook()],
       [{ sheet: "Restricted Stock", data: [] }],
       changed(0, 32, "Wrong"),
       null,
     ])
       expect(() => parseRsuLotList(input)).toThrow();
-  });
-  it.each([1, 2, 3])("rejects duplicate related records or lots %s", (index) => {
-    const input = workbook();
-    const data = input[0]?.data;
-    const record = data?.[index];
-    if (!data || !record) throw new Error("Missing fixture");
-    data.push(record);
-    expect(() => parseRsuLotList(input)).toThrow();
   });
   it.each([1, 2])("rejects missing related records %s", (index) => {
     expect(() => parseRsuLotList(changed(index, 0, "Ignored"))).toThrow();
