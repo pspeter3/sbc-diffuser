@@ -13,7 +13,6 @@ export interface RsuLot {
   readonly vestPeriod: VestPeriod;
   readonly symbol: string;
   readonly vestDate: IsoDate;
-  readonly releaseDate: IsoDate;
   readonly blocked: boolean;
   /** Positive sellable quantity, otherwise blocked quantity; never their sum. */
   readonly quantity: Readonly<BigNumber>;

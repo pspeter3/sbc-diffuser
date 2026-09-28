@@ -42,7 +42,6 @@ export function PlannerFormView({
   return (
     <form
       ref={form}
-      id="planner-form"
       aria-label="Planning parameters"
       aria-describedby="configuration-help"
       onSubmit={submit}
@@ -53,14 +52,12 @@ export function PlannerFormView({
         }
       }}
     >
-      <div id="stock-prices">
-        {symbols.map((symbol) => (
-          <label key={symbol}>
-            {symbol} stock price (USD per share)
-            <input name={`price:${symbol}`} type="number" min="0" step="any" required />
-          </label>
-        ))}
-      </div>
+      {symbols.map((symbol) => (
+        <label key={symbol}>
+          {symbol} stock price (USD per share)
+          <input name={`price:${symbol}`} type="number" min="0" step="any" required />
+        </label>
+      ))}
       <label for="wealth">Investable wealth excluding workbook holdings (USD)</label>
       <input id="wealth" name="wealth" type="number" min="0" step="any" required />
       <label for="target">Desired wealth concentration (%)</label>

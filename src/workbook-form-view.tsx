@@ -1,14 +1,14 @@
 import { type JSX } from "preact";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
+import readXlsxFile from "read-excel-file/browser";
 
+import { parseRsuLotList } from "./parser.ts";
 import { type RsuLotList } from "./schema.ts";
-
-export type OnParseRsuLotList = (lots: RsuLotList, filename: string) => void;
 
 export function WorkbookFormView({
   onParseRsuLotList,
 }: {
-  onParseRsuLotList: OnParseRsuLotList;
+  onParseRsuLotList: (lots: RsuLotList) => void;
 }): JSX.Element {
   const input = useRef<HTMLInputElement>(null);
   const pending = useRef(false);
@@ -28,11 +28,7 @@ export function WorkbookFormView({
     setLoading(true);
     setError(null);
     try {
-      const [{ default: readXlsxFile }, { parseRsuLotList }] = await Promise.all([
-        import("read-excel-file/browser"),
-        import("./parser.ts"),
-      ]);
-      onParseRsuLotList(parseRsuLotList(await readXlsxFile(file)), file.name);
+      onParseRsuLotList(parseRsuLotList(await readXlsxFile(file)));
     } finally {
       pending.current = false;
       setLoading(false);
@@ -40,7 +36,6 @@ export function WorkbookFormView({
   }
   return (
     <form
-      id="workbook-form"
       aria-label="Workbook import"
       onSubmit={(event) => {
         event.preventDefault();
