@@ -47,7 +47,7 @@ function workbook(): { sheet: string; data: unknown[][] }[] {
 function changed(row: number, column: number, value: unknown): ReturnType<typeof workbook> {
   const sheets = workbook();
   const cells = sheets[0]?.data[row];
-  if (!cells) throw new Error("Invalid fixture row");
+  if (cells === undefined) throw new Error("Invalid fixture row");
   cells[column] = value;
   return sheets;
 }
@@ -75,10 +75,10 @@ describe("RSU parser", () => {
   ])("resolves held quantity from sellable %s and blocked %s", (sellable, blocked, held) => {
     const input = changed(3, 30, blocked);
     const cells = input[0]?.data[3];
-    if (!cells) throw new Error("Missing fixture row");
+    if (cells === undefined) throw new Error("Missing fixture row");
     cells[32] = sellable;
     const lot = parseRsuLotList(input)[0];
-    if (!lot) throw new Error("Missing parsed lot");
+    if (lot === undefined) throw new Error("Missing parsed lot");
     expect(lot.quantity.toString()).toBe(held);
   });
   it.each([-1, "junk", "Infinity"])("rejects invalid blocked quantity %s", (value) => {

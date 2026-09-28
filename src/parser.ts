@@ -71,14 +71,14 @@ function date(value: unknown): unknown {
   const trimmed = value.trim();
   const named = /^(\d{1,2})-([A-Za-z]{3})-(\d{4})$/.exec(trimmed);
   const slash = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(trimmed);
-  if (named) {
+  if (named !== null) {
     const month =
       ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"].indexOf(
         String(named[2]).toUpperCase(),
       ) + 1;
     return `${named[3]}-${String(month).padStart(2, "0")}-${String(named[1]).padStart(2, "0")}`;
   }
-  if (slash)
+  if (slash !== null)
     return `${slash[3]}-${String(slash[1]).padStart(2, "0")}-${String(slash[2]).padStart(2, "0")}`;
   return trimmed;
 }
@@ -91,14 +91,14 @@ const parser = z.pipe(
       issues.push({ code: "custom", input: sheets, path: [sheetName, row, field], message });
     };
     const sheet = sheets.find((sheet) => sheet.sheet === sheetName);
-    if (!sheet) {
+    if (sheet === undefined) {
       fail(1, "sheet", "Missing Restricted Stock worksheet");
       return [];
     }
     for (const [index, label] of columns) {
       if (sheet.data[0]?.[index] !== label) fail(1, index, `Expected column ${label}`);
     }
-    if (issues.length) return [];
+    if (issues.length > 0) return [];
 
     const rows = sheet.data.slice(1).map((cells, index) => ({ cells, row: index + 2 }));
     const lots: RsuLot[] = [];
@@ -115,9 +115,9 @@ const parser = z.pipe(
           text(entry.cells[11]) === grantNumber &&
           period(entry.cells[18]) === vestPeriod,
       );
-      if (!grant) fail(row, "grantNumber", "Missing matching grant");
-      if (!vest) fail(row, "vestPeriod", "Missing matching vest schedule");
-      if (!grant || !vest) continue;
+      if (grant === undefined) fail(row, "grantNumber", "Missing matching grant");
+      if (vest === undefined) fail(row, "vestPeriod", "Missing matching vest schedule");
+      if (grant === undefined || vest === undefined) continue;
       const result = rsuLotSchema.safeParse({
         grantNumber,
         vestPeriod,
