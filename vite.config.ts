@@ -1,6 +1,8 @@
+import preact from "@preact/preset-vite";
 import { defineConfig } from "vite-plus";
 
 export default defineConfig({
+  plugins: [preact()],
   base: "/sbc-diffuser/",
   css: {
     preprocessorOptions: {
@@ -43,11 +45,11 @@ export default defineConfig({
     },
     overrides: [
       {
-        files: ["src/**/*.ts"],
+        files: ["src/**/*.{ts,tsx}"],
         rules: { "import/no-default-export": "error" },
       },
       {
-        files: ["src/main.ts"],
+        files: ["src/main.tsx"],
         rules: { "typescript/no-non-null-assertion": "off" },
       },
     ],
@@ -55,11 +57,12 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
+    setupFiles: ["./tests/setup.ts"],
     coverage: {
       enabled: true,
       provider: "v8",
-      include: ["src/**/*.ts"],
-      exclude: ["src/**/*.test.ts", "src/main.ts"],
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: ["src/**/*.test.{ts,tsx}", "src/main.tsx"],
       thresholds: {
         lines: 100,
         functions: 100,

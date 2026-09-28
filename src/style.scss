@@ -1,4 +1,5 @@
 @use "@picocss/pico/scss/pico" with (
   $theme-color: "indigo",
+  $semantic-root-element: "#app",
   $enable-semantic-container: true
 );

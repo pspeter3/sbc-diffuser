@@ -191,53 +191,29 @@ selected. Generate the download locally without a server.
 
 ## Application and view architecture
 
-Use an `Application` class to coordinate app-specific DOM views through explicit
-method calls and user-action callbacks. Keep vanilla TypeScript, Pico CSS,
-persistent HTML, and in-memory session state; no new architectural dependency is
-required. The planner follows this architecture; the existing WorkbookFormView continues
-to own asynchronous reading and its duplicate-import guard.
+Use Preact 11 with TSX components and Pico CSS. `Application` owns imported
+holdings, valid planning parameters, selected lot indices, and the active screen.
+It passes data and typed callbacks to independent view components.
 
-### Responsibilities
-
-- **Application:** owns the workbook, valid planning parameters, selected lot
-  identities, and active screen. Orchestrates asynchronous import, domain
-  calculations, screen transitions, and session reset.
-- **WorkbookFormView:** wraps the import form, reports submitted files, and
-  exposes methods for loading, errors, reset, and focus.
-- **PlannerFormView:** wraps parameter controls, reads and validates input using
-  DOM-independent validation functions, and reports valid parameters on submit.
-  Exposes reset and focus methods.
-- **LotTableView:** renders held lots, reports lot identity and checked state on
-  checkbox changes, and exposes methods to update calculated cells, checked
-  states, and selection availability.
-- **SummaryView:** displays calculated statistics and clears them when
-  parameters are invalid.
+- **WorkbookFormView:** owns asynchronous workbook reading, the duplicate-import
+  guard, loading state, accessible errors, and initial input focus.
+- **PlannerFormView:** owns unsubmitted form values and validation, focuses the
+  first input on mount, and reports valid parameters on submit.
+- **LotTableView:** renders basis-sorted, keyed rows and reports checkbox changes.
+- **SummaryView:** derives statistics from the current parameters and selection.
 
 Keep parsing, validation, recommendation, and selection calculations independent
-of the DOM. Use independent concrete view classes, with no shared base class,
-separate ViewModel, generic Form/Table abstraction, or subscription mechanism.
-Views do not reference each other or Application; they receive callbacks for
-user actions and expose methods that Application calls.
+of Preact and the DOM. Views receive props and callbacks and do not reference one
+another. `main.tsx` mounts `Application`; `index.html` supplies the mount point.
 
-### State and DOM lifecycle
+Failed imports retain the import form. A successful import mounts the planner.
+Invalid parameter submissions preserve the current plan, and valid submissions
+replace manual selections with a fresh recommendation. Stable imported row
+indices serve as keys so sorting and summary updates preserve checkbox identity
+and keyboard focus. Parameter edits remain local to the form until submission.
 
-Construct views once around elements declared in `index.html`. Keep startup code
-limited to DOM lookup, view construction, and Application initialization.
-Application toggles screen roots using `hidden` and invokes the appropriate
-view's focus method after switching screens.
-
-Keep raw field values and displayed validation in the form views. Application
-stores only valid submitted domain parameters. Invalid submissions leave the
-current plan unchanged.
-
-WorkbookFormView owns the import-in-progress guard and its loading state. Failed imports retain the import screen and display useful
-diagnostics. Successful import stores the workbook, initializes the planner
-views, and reveals the planner.
-
-Build basis-sorted table rows once per workbook. Update calculated cells and
-checkbox states in place to preserve keyboard focus. Valid configuration submissions
-replace manual selections with a fresh recommendation. Checkbox changes update
-Application's selection and summary without changing other selections.
+Component and integration tests use `@testing-library/preact` to render TSX and
+exercise controls through labels and roles. Domain tests remain framework independent.
 
 ## Implementation sequence
 
@@ -250,8 +226,7 @@ Application's selection and summary without changing other selections.
    Use stable imported row indices for checkbox state so repeated grant/period
    records remain independently selectable; retain those indices when sorting. Adapt
    Node-specific or unsupported iterator usage for the project's browser target.
-3. **Build the import flow.** Declare the two persistent screen sections and
-   construct `WorkbookFormView` and `Application`. Coordinate import loading,
+3. **Build the import flow.** Render the import and planner screens with `WorkbookFormView` and `Application`. Coordinate import loading,
    duplicate prevention, validation errors, screen visibility, and focus through
    the architecture above.
 4. **Build the planner.** Construct `PlannerFormView`, `LotTableView`, and
@@ -287,7 +262,7 @@ Cover the behaviors that establish correctness:
   transition.
 - View rendering, safe workbook text insertion, accessible validation, and focus
   preservation during table updates and appropriate focus after screen changes.
-- Application coordination using substitute views and domain dependencies.
+- Application coordination through rendered components and user interactions.
 - CSV contents, escaping, and selection fidelity if export is implemented.
 
 Retain the repository's configured coverage requirements. Run `npm test` after
