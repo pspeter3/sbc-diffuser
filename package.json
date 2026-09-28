@@ -14,7 +14,9 @@
     "test": "vp run test:check && vp run test:unit"
   },
   "dependencies": {
-    "@picocss/pico": "^2.1.1"
+    "@picocss/pico": "^2.1.1",
+    "bignumber.js": "^11.1.5",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^5.0.1",
