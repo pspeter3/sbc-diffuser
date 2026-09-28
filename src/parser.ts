@@ -71,14 +71,14 @@ function date(value: unknown): unknown {
   const trimmed = value.trim();
   const named = /^(\d{1,2})-([A-Za-z]{3})-(\d{4})$/.exec(trimmed);
   const slash = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(trimmed);
-  if (named) {
+  if (named !== null) {
     const month =
       ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"].indexOf(
         String(named[2]).toUpperCase(),
       ) + 1;
     return `${named[3]}-${String(month).padStart(2, "0")}-${String(named[1]).padStart(2, "0")}`;
   }
-  if (slash)
+  if (slash !== null)
     return `${slash[3]}-${String(slash[1]).padStart(2, "0")}-${String(slash[2]).padStart(2, "0")}`;
   return trimmed;
 }
@@ -90,40 +90,34 @@ const parser = z.pipe(
     const fail = (row: number, field: string | number, message: string): void => {
       issues.push({ code: "custom", input: sheets, path: [sheetName, row, field], message });
     };
-    const matches = sheets.filter((sheet) => sheet.sheet === sheetName);
-    const sheet = matches[0];
-    if (matches.length !== 1 || !sheet) {
-      fail(1, "sheet", "Expected exactly one Restricted Stock worksheet");
+    const sheet = sheets.find((sheet) => sheet.sheet === sheetName);
+    if (sheet === undefined) {
+      fail(1, "sheet", "Missing Restricted Stock worksheet");
       return [];
     }
     for (const [index, label] of columns) {
       if (sheet.data[0]?.[index] !== label) fail(1, index, `Expected column ${label}`);
     }
-    if (issues.length) return [];
+    if (issues.length > 0) return [];
 
     const rows = sheet.data.slice(1).map((cells, index) => ({ cells, row: index + 2 }));
     const lots: RsuLot[] = [];
-    const seen = new Set<string>();
     for (const { cells, row } of rows) {
       if (cells[0] !== "Sellable Shares") continue;
       const grantNumber = text(cells[11]);
       const vestPeriod = period(cells[18]);
-      const grants = rows.filter(
+      const grant = rows.find(
         (entry) => entry.cells[0] === "Grant" && text(entry.cells[11]) === grantNumber,
       );
-      const vests = rows.filter(
+      const vest = rows.find(
         (entry) =>
           entry.cells[0] === "Vest Schedule" &&
           text(entry.cells[11]) === grantNumber &&
           period(entry.cells[18]) === vestPeriod,
       );
-      const grant = grants[0];
-      const vest = vests[0];
-      if (grants.length !== 1 || !grant)
-        fail(row, "grantNumber", "Expected exactly one matching grant");
-      if (vests.length !== 1 || !vest)
-        fail(row, "vestPeriod", "Expected exactly one matching vest schedule");
-      if (!grant || !vest) continue;
+      if (grant === undefined) fail(row, "grantNumber", "Missing matching grant");
+      if (vest === undefined) fail(row, "vestPeriod", "Missing matching vest schedule");
+      if (grant === undefined || vest === undefined) continue;
       const result = rsuLotSchema.safeParse({
         grantNumber,
         vestPeriod,
@@ -143,9 +137,6 @@ const parser = z.pipe(
         }
         continue;
       }
-      const key = JSON.stringify([result.data.grantNumber, result.data.vestPeriod]);
-      if (seen.has(key)) fail(row, "vestPeriod", "Duplicate RSU lot for grant and vest period");
-      seen.add(key);
       lots.push({
         grantNumber: result.data.grantNumber,
         vestPeriod: result.data.vestPeriod,

@@ -47,7 +47,7 @@ function workbook(): { sheet: string; data: unknown[][] }[] {
 function changed(row: number, column: number, value: unknown): ReturnType<typeof workbook> {
   const sheets = workbook();
   const cells = sheets[0]?.data[row];
-  if (!cells) throw new Error("Invalid fixture row");
+  if (cells === undefined) throw new Error("Invalid fixture row");
   cells[column] = value;
   return sheets;
 }
@@ -75,10 +75,10 @@ describe("RSU parser", () => {
   ])("resolves held quantity from sellable %s and blocked %s", (sellable, blocked, held) => {
     const input = changed(3, 30, blocked);
     const cells = input[0]?.data[3];
-    if (!cells) throw new Error("Missing fixture row");
+    if (cells === undefined) throw new Error("Missing fixture row");
     cells[32] = sellable;
     const lot = parseRsuLotList(input)[0];
-    if (!lot) throw new Error("Missing parsed lot");
+    if (lot === undefined) throw new Error("Missing parsed lot");
     expect(lot.quantity.toString()).toBe(held);
   });
   it.each([-1, "junk", "Infinity"])("rejects invalid blocked quantity %s", (value) => {
@@ -116,23 +116,14 @@ describe("RSU parser", () => {
       expect(error).toHaveProperty("issues.0.path", ["Restricted Stock", sourceRow, field]);
     }
   });
-  it("rejects absent, duplicate, or malformed sheets and headers", () => {
+  it("rejects absent or malformed sheets and headers", () => {
     for (const input of [
       [],
-      [...workbook(), ...workbook()],
       [{ sheet: "Restricted Stock", data: [] }],
       changed(0, 32, "Wrong"),
       null,
     ])
       expect(() => parseRsuLotList(input)).toThrow();
-  });
-  it.each([1, 2, 3])("rejects duplicate related records or lots %s", (index) => {
-    const input = workbook();
-    const data = input[0]?.data;
-    const record = data?.[index];
-    if (!data || !record) throw new Error("Missing fixture");
-    data.push(record);
-    expect(() => parseRsuLotList(input)).toThrow();
   });
   it.each([1, 2])("rejects missing related records %s", (index) => {
     expect(() => parseRsuLotList(changed(index, 0, "Ignored"))).toThrow();

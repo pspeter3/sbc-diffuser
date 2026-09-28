@@ -2,15 +2,3 @@
   $theme-color: "indigo",
   $enable-semantic-container: true
 );
-
-body > header {
-  padding-block: 2rem 1rem;
-}
-
-body > header h1 {
-  margin-bottom: 0;
-}
-
-main form {
-  max-width: 40rem;
-}

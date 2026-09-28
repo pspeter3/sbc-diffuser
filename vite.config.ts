@@ -30,6 +30,10 @@ export default defineConfig({
       "typescript/no-unsafe-return": "error",
       "typescript/no-floating-promises": ["error", { ignoreVoid: false, checkThenables: true }],
       "typescript/no-misused-promises": "error",
+      "typescript/strict-boolean-expressions": [
+        "error",
+        { allowNullableObject: false, allowNumber: false, allowString: false },
+      ],
       "unicorn/prefer-add-event-listener": "error",
     },
     overrides: [
