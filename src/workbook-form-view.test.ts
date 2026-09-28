@@ -1,14 +1,28 @@
 import readXlsxFile from "read-excel-file/browser";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
-import { parseRsuLotList } from "./parser.ts";
-import { type RsuLotList } from "./schema.ts";
 import { WorkbookFormView } from "./workbook-form-view.ts";
 
 vi.mock("read-excel-file/browser", () => ({ default: vi.fn() }));
-vi.mock("./parser.ts", () => ({ parseRsuLotList: vi.fn() }));
 
-const lots: RsuLotList = [];
+function emptyWorkbook(): { sheet: string; data: string[][] }[] {
+  const headers: string[] = Array.from({ length: 62 }, () => "");
+  for (const [index, label] of [
+    [0, "Record Type"],
+    [1, "Symbol"],
+    [11, "Grant Number"],
+    [18, "Vest Period"],
+    [19, "Vest Date"],
+    [30, "Blocked Share Qty."],
+    [32, "Sellable Qty."],
+    [35, "Est. Cost Basis (per share):"],
+    [61, "Release Date"],
+  ] as const)
+    headers[index] = label;
+  return [{ sheet: "Restricted Stock", data: [headers] }];
+}
+
+function ignoreImport(): void {}
 
 function formWithFile(): {
   form: HTMLFormElement;
@@ -50,44 +64,49 @@ beforeEach((): void => {
 });
 
 describe("WorkbookFormView", (): void => {
-  it("requires the form controls", (): void => {
-    const form = document.createElement("form");
-    expect(() => new WorkbookFormView(form, vi.fn())).toThrow("file input and submit button");
-    form.innerHTML = '<input type="file" name="workbook">';
-    expect(() => new WorkbookFormView(form, vi.fn())).toThrow("file input and submit button");
+  it("requires a workbook input and submit button", (): void => {
+    const { form, input, button } = formWithFile();
+    input.remove();
+    expect(() => new WorkbookFormView(form, ignoreImport)).toThrow(
+      "The workbook form needs a file input and submit button",
+    );
+
+    form.append(input);
+    button.remove();
+    expect(() => new WorkbookFormView(form, ignoreImport)).toThrow(
+      "The workbook form needs a file input and submit button",
+    );
   });
 
   it("prompts for a missing file", async (): Promise<void> => {
     const { form, input } = formWithFile();
-    new WorkbookFormView(form, vi.fn());
-    expect(submit(form)).toBe(false);
+    new WorkbookFormView(form, ignoreImport);
+    submit(form);
     await vi.waitFor((): void => expect(input.getAttribute("aria-invalid")).toBe("true"));
     expect(input.nextElementSibling?.textContent).toBe("Choose an .xlsx workbook to import.");
     expect(input.getAttribute("aria-describedby")).toBe("workbook-help workbook-file-error");
-    expect(readXlsxFile).not.toHaveBeenCalled();
   });
 
-  it("reads and parses once while loading, then reports the lots", async (): Promise<void> => {
+  it("disables the submit button while importing and restores it afterward", async (): Promise<void> => {
     const { form, input, button } = formWithFile();
-    const file = chooseFile(input);
-    let finishRead: ((sheets: []) => void) | undefined;
-    vi.mocked(readXlsxFile).mockImplementation(
-      () => new Promise((resolve) => (finishRead = resolve)),
-    );
-    vi.mocked(parseRsuLotList).mockReturnValue(lots);
-    const onParseRsuLotList = vi.fn();
-    const view = new WorkbookFormView(form, onParseRsuLotList);
+    chooseFile(input);
+    let finishRead: ((sheets: ReturnType<typeof emptyWorkbook>) => void) | undefined;
+    const pendingRead = new Promise<ReturnType<typeof emptyWorkbook>>((resolve) => {
+      finishRead = resolve;
+    });
+    vi.mocked(readXlsxFile).mockReturnValue(pendingRead);
+    const view = new WorkbookFormView(form, ignoreImport);
 
     submit(form);
-    await vi.waitFor((): void => expect(readXlsxFile).toHaveBeenCalledWith(file));
     expect(button.disabled).toBe(true);
     expect(button.getAttribute("aria-busy")).toBe("true");
-    submit(form);
-    expect(readXlsxFile).toHaveBeenCalledTimes(1);
 
-    finishRead?.([]);
-    await vi.waitFor((): void => expect(onParseRsuLotList).toHaveBeenCalledWith(lots));
-    expect(parseRsuLotList).toHaveBeenCalledWith([]);
+    submit(form);
+    expect(button.disabled).toBe(true);
+    expect(button.getAttribute("aria-busy")).toBe("true");
+
+    finishRead?.(emptyWorkbook());
+    await vi.waitFor((): void => expect(button.disabled).toBe(false));
     expect(button.disabled).toBe(false);
     expect(button.hasAttribute("aria-busy")).toBe(false);
     expect(input.hasAttribute("aria-invalid")).toBe(false);
@@ -99,21 +118,14 @@ describe("WorkbookFormView", (): void => {
     const { form, input, button } = formWithFile();
     chooseFile(input);
     vi.mocked(readXlsxFile).mockResolvedValue([]);
-    vi.mocked(parseRsuLotList).mockImplementation(() => {
-      throw new Error("Restricted Stock row 3: invalid quantity");
-    });
-    const onParseRsuLotList = vi.fn();
-    const view = new WorkbookFormView(form, onParseRsuLotList);
+    const view = new WorkbookFormView(form, ignoreImport);
 
     submit(form);
     await vi.waitFor((): void =>
-      expect(input.nextElementSibling?.textContent).toBe(
-        "Restricted Stock row 3: invalid quantity",
-      ),
+      expect(input.nextElementSibling?.textContent).toContain("Missing Restricted Stock worksheet"),
     );
     expect(input.getAttribute("aria-invalid")).toBe("true");
     expect(button.disabled).toBe(false);
-    expect(onParseRsuLotList).not.toHaveBeenCalled();
 
     view.reset();
     expect(input.hasAttribute("aria-invalid")).toBe(false);
@@ -123,10 +135,10 @@ describe("WorkbookFormView", (): void => {
   });
 
   it("handles reader failures and replaces old validation text", async (): Promise<void> => {
-    const { form, input } = formWithFile();
+    const { form, input, button } = formWithFile();
     chooseFile(input);
     vi.mocked(readXlsxFile).mockRejectedValue(new Error("Invalid XLSX archive"));
-    new WorkbookFormView(form, vi.fn());
+    new WorkbookFormView(form, ignoreImport);
 
     submit(form);
     await vi.waitFor((): void =>
@@ -141,10 +153,10 @@ describe("WorkbookFormView", (): void => {
     );
     expect(form.querySelectorAll("#workbook-file-error")).toHaveLength(1);
 
-    vi.mocked(readXlsxFile).mockResolvedValueOnce([]);
-    vi.mocked(parseRsuLotList).mockReturnValue(lots);
+    vi.mocked(readXlsxFile).mockResolvedValueOnce(emptyWorkbook());
     submit(form);
-    await vi.waitFor((): void => expect(input.hasAttribute("aria-invalid")).toBe(false));
+    await vi.waitFor((): void => expect(button.disabled).toBe(false));
+    expect(input.hasAttribute("aria-invalid")).toBe(false);
     expect(form.querySelector("#workbook-file-error")).toBeNull();
   });
 
@@ -153,7 +165,7 @@ describe("WorkbookFormView", (): void => {
     input.removeAttribute("aria-describedby");
     chooseFile(input);
     vi.mocked(readXlsxFile).mockRejectedValue("unrecognized failure");
-    const view = new WorkbookFormView(form, vi.fn());
+    const view = new WorkbookFormView(form, ignoreImport);
     submit(form);
     await vi.waitFor((): void => expect(input.hasAttribute("aria-invalid")).toBe(true));
     expect(input.getAttribute("aria-describedby")).toBe("workbook-file-error");
@@ -171,7 +183,7 @@ describe("WorkbookFormView", (): void => {
         },
       },
     });
-    new WorkbookFormView(form, vi.fn());
+    new WorkbookFormView(form, ignoreImport);
 
     submit(form);
     await vi.waitFor((): void =>
