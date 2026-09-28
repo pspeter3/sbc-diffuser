@@ -16,6 +16,7 @@
   "dependencies": {
     "@picocss/pico": "^2.1.1",
     "bignumber.js": "^11.1.5",
+    "read-excel-file": "^9.3.10",
     "zod": "^4.6.5"
   },
   "devDependencies": {
