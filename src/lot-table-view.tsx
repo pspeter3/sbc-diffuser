@@ -1,5 +1,6 @@
 import { type BigNumber } from "bignumber.js";
 import { type JSX } from "preact";
+import { useMemo } from "preact/hooks";
 
 import { type RsuLot, type RsuLotList } from "./schema.ts";
 
@@ -14,9 +15,10 @@ export function LotTableView({
   selected: ReadonlySet<number>;
   onSelection: (index: number, checked: boolean) => void;
 }): JSX.Element {
-  const sorted = lots
-    .map((lot, index) => ({ lot, index }))
-    .sort((a, b) => compareLots(a.lot, b.lot));
+  const sorted = useMemo(
+    () => lots.map((lot, index) => ({ lot, index })).sort((a, b) => compareLots(a.lot, b.lot)),
+    [lots],
+  );
   return (
     <div class="overflow-auto" tabIndex={0} role="region" aria-label="Held RSU lots">
       <table>
@@ -40,7 +42,7 @@ export function LotTableView({
             ))}
           </tr>
         </thead>
-        <tbody id="lot-rows">
+        <tbody>
           {sorted.map(({ lot, index }) => {
             const price = prices?.get(lot.symbol);
             return (

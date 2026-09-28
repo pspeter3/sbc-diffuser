@@ -61,7 +61,6 @@ describe("RSU parser", () => {
       vestPeriod: "1",
       symbol: "EXAMPLE",
       vestDate: "2025-09-20",
-      releaseDate: "2025-09-22",
       blocked: false,
       quantity: new BigNumber("10.125"),
       estimatedCostBasisPerShare: new BigNumber("12.34567890123456789"),
@@ -85,8 +84,16 @@ describe("RSU parser", () => {
   it.each([-1, "junk", "Infinity"])("rejects invalid blocked quantity %s", (value) => {
     expect(() => parseRsuLotList(changed(3, 30, value))).toThrow();
   });
-  it.each(["2025-09-22", new Date("2025-09-22T00:00:00Z")])("normalizes date %s", (value) => {
-    expect(parseRsuLotList(changed(3, 61, value))[0]?.releaseDate).toBe("2025-09-22");
+  it.each(["2025-09-22", "9/22/2025", new Date("2025-09-22T00:00:00Z")])(
+    "normalizes date %s",
+    (value) => {
+      expect(parseRsuLotList(changed(2, 19, value))[0]?.vestDate).toBe("2025-09-22");
+    },
+  );
+  it("ignores unused release date fields and headers", () => {
+    const input = changed(3, 61, "not a date");
+    for (const sheet of input) sheet.data[0]?.splice(61);
+    expect(parseRsuLotList(input)).toEqual(parseRsuLotList(workbook()));
   });
   it.each([0, "0", "1e2", ".5"])("accepts decimal %s", (value) => {
     expect(parseRsuLotList(changed(3, 32, value))[0]?.quantity.toString()).toBe(
@@ -102,7 +109,7 @@ describe("RSU parser", () => {
   it.each([null, "", "2025-02-30", "30-Feb-2025", "01-XYZ-2025", new Date(NaN)])(
     "rejects invalid date %s",
     (value) => {
-      expect(() => parseRsuLotList(changed(3, 61, value))).toThrow();
+      expect(() => parseRsuLotList(changed(2, 19, value))).toThrow();
     },
   );
   it.each([

@@ -14,9 +14,6 @@ export function lot(
   return {
     symbol,
     vestDate: z.custom<RsuLot["vestDate"]>((v) => z.iso.date().safeParse(v).success).parse(date),
-    releaseDate: z
-      .custom<RsuLot["releaseDate"]>((v) => z.iso.date().safeParse(v).success)
-      .parse(date),
     grantNumber: z.custom<RsuLot["grantNumber"]>((v) => typeof v === "string").parse(grant),
     vestPeriod: z.custom<RsuLot["vestPeriod"]>((v) => typeof v === "string").parse(period),
     estimatedCostBasisPerShare: new BigNumber(basis),

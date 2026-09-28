@@ -25,7 +25,6 @@ const rsuLotSchema = z.object({
   vestPeriod: vestPeriodSchema,
   symbol: z.string().check(z.minLength(1)),
   vestDate: isoDateSchema,
-  releaseDate: isoDateSchema,
   sellableQuantity: amountSchema,
   blockedShareQuantity: z.nullable(amountSchema),
   estimatedCostBasisPerShare: amountSchema,
@@ -42,7 +41,6 @@ const columns = new Map<number, string>([
   [30, "Blocked Share Qty."],
   [32, "Sellable Qty."],
   [35, "Est. Cost Basis (per share):"],
-  [61, "Release Date"],
 ]);
 
 const inputSchema = z.array(z.object({ sheet: z.string(), data: z.array(z.array(z.unknown())) }));
@@ -123,7 +121,6 @@ const parser = z.pipe(
         vestPeriod,
         symbol: text(grant.cells[1]),
         vestDate: date(vest.cells[19]),
-        releaseDate: date(cells[61]),
         sellableQuantity: decimal(cells[32]),
         blockedShareQuantity:
           cells[30] == null || text(cells[30]) === "" ? null : decimal(cells[30]),
@@ -142,7 +139,6 @@ const parser = z.pipe(
         vestPeriod: result.data.vestPeriod,
         symbol: result.data.symbol,
         vestDate: result.data.vestDate,
-        releaseDate: result.data.releaseDate,
         blocked: !result.data.sellableQuantity.isGreaterThan(0),
         estimatedCostBasisPerShare: result.data.estimatedCostBasisPerShare,
         quantity: result.data.sellableQuantity.isGreaterThan(0)

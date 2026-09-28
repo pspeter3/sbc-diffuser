@@ -34,8 +34,16 @@ it("imports, configures, selects manually, and replaces selections on submission
   expect(checkbox.checked).toBe(false);
   expect(document.activeElement).toBe(checkbox);
   expect(within(summary).getByText("Selection does not meet the target")).toBeTruthy();
+  fireEvent.input(price, { target: { value: "80" } });
+  expect(
+    within(summary).getByText("Current stock value (USD)").nextElementSibling?.textContent,
+  ).toBe("400.00");
   fireEvent.click(checkbox);
   expect(checkbox.checked).toBe(true);
+  expect(price).toHaveProperty("value", "80");
+  expect(within(summary).getByText("Selected proceeds (USD)").nextElementSibling?.textContent).toBe(
+    "400.00",
+  );
   fireEvent.click(checkbox);
   fireEvent.input(price, { target: { value: "0" } });
   fireEvent.submit(screen.getByRole("form"));
@@ -45,9 +53,35 @@ it("imports, configures, selects manually, and replaces selections on submission
   expect(checkbox.checked).toBe(true);
 });
 
-it("supports an empty workbook", async (): Promise<void> => {
+it("only asks for prices for symbols with held lots", async (): Promise<void> => {
   const data = workbook();
-  for (const sheet of data) sheet.data.splice(1);
+  const excluded = workbook().flatMap((sheet) =>
+    sheet.data.slice(1).map((row) => {
+      const next = [...row];
+      next[1] = "EMPTY";
+      next[11] = "empty-grant";
+      next[32] = "0";
+      return next;
+    }),
+  );
+  for (const sheet of data) sheet.data.push(...excluded);
+  vi.mocked(readXlsxFile).mockResolvedValue(data);
+  render(<Application />);
+  fireEvent.change(screen.getByLabelText("Workbook (.xlsx)"), {
+    target: { files: [new File([], "lots.xlsx")] },
+  });
+  fireEvent.submit(screen.getByRole("form", { name: "Workbook import" }));
+  await screen.findByLabelText("TEST stock price (USD per share)");
+  expect(screen.queryByLabelText("EMPTY stock price (USD per share)")).toBeNull();
+  expect(screen.getAllByRole("checkbox")).toHaveLength(1);
+});
+
+it.each(["empty", "zero-quantity"])("supports a %s workbook", async (kind): Promise<void> => {
+  const data = workbook();
+  for (const sheet of data) {
+    if (kind === "empty") sheet.data.splice(1);
+    else for (const row of sheet.data.slice(1)) row[32] = "0";
+  }
   vi.mocked(readXlsxFile).mockResolvedValue(data);
   render(<Application />);
   fireEvent.change(screen.getByLabelText("Workbook (.xlsx)"), {
@@ -56,6 +90,7 @@ it("supports an empty workbook", async (): Promise<void> => {
   fireEvent.submit(screen.getByRole("form"));
   const wealth = await screen.findByLabelText(/Investable wealth/);
   expect(document.activeElement).toBe(wealth);
+  expect(screen.queryByLabelText("TEST stock price (USD per share)")).toBeNull();
   expect(screen.queryByRole("checkbox")).toBeNull();
   fireEvent.input(wealth, { target: { value: "0" } });
   fireEvent.input(screen.getByLabelText(/Desired wealth/), { target: { value: "0" } });

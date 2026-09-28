@@ -19,7 +19,7 @@ checkboxes do not execute trades or record completed sales.
 
 The initial version supports the existing E*TRADE By Benefit Type XLSX format and
 multiple stock symbols per workbook, with a separate manually entered USD price
-for each symbol in the RsuLotList. Concentration refers to the combined value of
+for each symbol with positive held quantity. Concentration refers to the combined value of
 workbook RSUs. Missing symbol information must produce a useful validation error.
 
 Plan sales of held RSUs, including blackout-blocked shares. Exclude options and
@@ -35,9 +35,9 @@ multi-period schedules are outside the initial scope.
 
 ## Screen structure
 
-Use two screen elements declared in `index.html`, with conditional visibility via
-the `hidden` attribute. Retain vanilla TypeScript, Pico CSS, and the existing
-Vite+ tooling. A router or UI framework is unnecessary for this flow.
+Use Preact 11 with TypeScript, Pico CSS, and the existing Vite+ tooling.
+`index.html` supplies the mount point. Conditionally mount the import form or
+planner; no router is needed for this flow.
 
 ### Screen 1: import workbook
 
@@ -48,10 +48,11 @@ Vite+ tooling. A router or UI framework is unnecessary for this flow.
 - Adapt the existing parser's normalization, structural validation, and
   cross-record validation. Preserve useful sheet, row, and column diagnostics.
 - On failure, stay on the import screen and let the user choose another file.
-- On success, show the planner with the file name and derived stock symbol.
+- On success, show the planner with the stock symbols derived from held lots.
 
 The current parser expects the `Restricted Stock` worksheet and its required
-column headers. Options worksheets are ignored. Preserve this supported format unless
+column headers. Release dates are unused and are not required or validated.
+Options worksheets are ignored. Preserve this supported format unless
 additional real exports establish a need to accept other shapes.
 
 ### Screen 2: configure and review
@@ -192,19 +193,24 @@ selected. Generate the download locally without a server.
 ## Application and view architecture
 
 Use Preact 11 with TSX components and Pico CSS. `Application` owns imported
-holdings, valid planning parameters, selected lot indices, and the active screen.
-It passes data and typed callbacks to independent view components.
+holdings and the import-to-planner transition. It filters out zero-quantity lots.
+`Planner` owns valid planning parameters and selected lot indices, and derives
+symbols from its held lots. Components pass data and typed callbacks through props.
+Use eager imports: the app is small enough that code-loading states are unnecessary.
+Workbook file reading remains asynchronous.
 
 - **WorkbookFormView:** owns asynchronous workbook reading, the duplicate-import
   guard, loading state, accessible errors, and initial input focus.
-- **PlannerFormView:** owns unsubmitted form values and validation, focuses the
-  first input on mount, and reports valid parameters on submit.
-- **LotTableView:** renders basis-sorted, keyed rows and reports checkbox changes.
+- **PlannerFormView:** uses uncontrolled inputs and native field validation,
+  focuses the first input on mount, and reports valid parameters only when its
+  Update plan button submits the form.
+- **LotTableView:** memoizes the basis-sorted rows per imported lot list, renders
+  keyed rows with controlled checkboxes, and reports checkbox changes.
 - **SummaryView:** derives statistics from the current parameters and selection.
 
 Keep parsing, validation, recommendation, and selection calculations independent
-of Preact and the DOM. Views receive props and callbacks and do not reference one
-another. `main.tsx` mounts `Application`; `index.html` supplies the mount point.
+of Preact and the DOM. Child views receive props and callbacks and do not reference
+one another. `main.tsx` mounts `Application`; `index.html` supplies the mount point.
 
 Failed imports retain the import form. A successful import mounts the planner.
 Invalid parameter submissions preserve the current plan, and valid submissions
@@ -230,7 +236,7 @@ exercise controls through labels and roles. Domain tests remain framework indepe
    duplicate prevention, validation errors, screen visibility, and focus through
    the architecture above.
 4. **Build the planner.** Construct `PlannerFormView`, `LotTableView`, and
-   `SummaryView`. Connect validated-input and checkbox callbacks to Application's
+   `SummaryView`. Connect validated-input and checkbox callbacks to Planner's
    state and domain calculations. Implement automatic replacement of selections,
    in-place table updates, live summaries, and collapsible planner sections.
 5. **Polish and verify.** Check empty holdings, invalid inputs, blocked lots,

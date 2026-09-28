@@ -41,7 +41,6 @@ it("prevents duplicate imports, reports parsed lots, and restores the button", a
   await waitFor(() => expect(button.disabled).toBe(false));
   expect(button.hasAttribute("aria-busy")).toBe(false);
   expect(onImport.mock.lastCall?.[0]).toHaveLength(1);
-  expect(onImport.mock.lastCall?.[1]).toBe("lots.xlsx");
 });
 
 it("shows parser errors and recovers on retry", async (): Promise<void> => {
