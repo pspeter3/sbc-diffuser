@@ -83,6 +83,8 @@ export class LotTableView {
 }
 
 function compareLots(a: RsuLot, b: RsuLot): number {
+  const basis = Number(b.estimatedCostBasisPerShare.comparedTo(a.estimatedCostBasisPerShare));
+  if (basis !== 0) return basis;
   const date = a.vestDate.localeCompare(b.vestDate);
   if (date !== 0) return date;
   const grant = a.grantNumber.localeCompare(b.grantNumber);

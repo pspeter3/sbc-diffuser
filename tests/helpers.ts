@@ -14,7 +14,6 @@ export function views(): {
   form: PlannerFormView;
   table: LotTableView;
   summary: SummaryView;
-  heading: HTMLElement;
 } {
   const screen = document.createElement("section");
   const form = new PlannerFormView(
@@ -22,7 +21,6 @@ export function views(): {
     document.createElement("div"),
     document.createElement("input"),
     document.createElement("input"),
-    document.createElement("p"),
     (): void => {},
   );
   return {
@@ -30,7 +28,6 @@ export function views(): {
     form,
     table: new LotTableView(document.createElement("tbody"), (): void => {}),
     summary: new SummaryView(document.createElement("section")),
-    heading: document.createElement("p"),
   };
 }
 
@@ -70,14 +67,13 @@ export function parameters(target = "50", wealth = "0"): Parameters {
   };
 }
 
-export function plannerForm(onChange = vi.fn()): PlannerFormView {
+export function plannerForm(onSubmit = vi.fn()): PlannerFormView {
   return new PlannerFormView(
     element(document, "#planner-form", HTMLFormElement),
     element(document, "#stock-prices", HTMLElement),
     element(document, "#wealth", HTMLInputElement),
     element(document, "#target", HTMLInputElement),
-    element(document, "#configuration-status", HTMLElement),
-    onChange,
+    onSubmit,
   );
 }
 export function enter(selector: string, value: string): void {

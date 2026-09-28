@@ -10,7 +10,6 @@ const plannerForm = new PlannerFormView(
   document.querySelector<HTMLElement>("#stock-prices")!,
   document.querySelector<HTMLInputElement>("#wealth")!,
   document.querySelector<HTMLInputElement>("#target")!,
-  document.querySelector<HTMLElement>("#configuration-status")!,
   (parameters): void => application.configure(parameters),
 );
 const table = new LotTableView(
@@ -18,14 +17,4 @@ const table = new LotTableView(
   (index, checked): void => application.select(index, checked),
 );
 const summary = new SummaryView(document.querySelector<HTMLElement>("#summary")!);
-const application = new Application(
-  workbookForm,
-  plannerScreen,
-  plannerForm,
-  table,
-  summary,
-  document.querySelector<HTMLElement>("#workbook-name")!,
-);
-document
-  .querySelector<HTMLButtonElement>("#replace-workbook")!
-  .addEventListener("click", (): void => application.replace());
+const application = new Application(workbookForm, plannerScreen, plannerForm, table, summary);

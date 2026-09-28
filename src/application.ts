@@ -12,7 +12,6 @@ export class Application {
   readonly #plannerForm: PlannerFormView;
   readonly #table: LotTableView;
   readonly #summary: SummaryView;
-  readonly #heading: HTMLElement;
   #lots: RsuLotList = [];
   #parameters: Parameters | null = null;
   #selected = new Set<number>();
@@ -23,17 +22,14 @@ export class Application {
     plannerForm: PlannerFormView,
     table: LotTableView,
     summary: SummaryView,
-    heading: HTMLElement,
   ) {
     this.#importScreen = workbookForm;
     this.#plannerScreen = plannerScreen;
     this.#plannerForm = plannerForm;
     this.#table = table;
     this.#summary = summary;
-    this.#heading = heading;
-    this.#workbookFormView = new WorkbookFormView(workbookForm, (lots, filename): void => {
+    this.#workbookFormView = new WorkbookFormView(workbookForm, (lots): void => {
       this.#lots = lots.filter((lot) => lot.quantity.gt(0));
-      this.#heading.textContent = `${filename} — ${this.#lots.length} held lots`;
       this.#plannerForm.setSymbols([...new Set(lots.map((lot) => lot.symbol))].sort());
       this.#table.setLots(this.#lots);
       this.configure(null);
@@ -56,18 +52,6 @@ export class Application {
     if (checked) this.#selected.add(index);
     else this.#selected.delete(index);
     this.#renderSummary();
-  }
-
-  replace(): void {
-    this.#lots = [];
-    this.#heading.textContent = "";
-    this.#plannerForm.setSymbols([]);
-    this.#table.setLots([]);
-    this.configure(null);
-    this.#workbookFormView.reset();
-    this.#plannerScreen.hidden = true;
-    this.#importScreen.hidden = false;
-    this.#workbookFormView.focus();
   }
 
   #renderSummary(): void {

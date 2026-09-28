@@ -22,7 +22,7 @@ describe("Application", (): void => {
     const focus = vi.spyOn(input, "focus");
 
     const v = views();
-    new Application(form, v.screen, v.form, v.table, v.summary, v.heading);
+    new Application(form, v.screen, v.form, v.table, v.summary);
 
     expect(focus).toHaveBeenCalledOnce();
   });
@@ -69,7 +69,7 @@ describe("Application", (): void => {
     const file = new File(["xlsx"], "lots.xlsx");
     Object.defineProperty(input, "files", { value: { item: () => file } });
     const v = views();
-    const app = new Application(form, v.screen, v.form, v.table, v.summary, v.heading);
+    const app = new Application(form, v.screen, v.form, v.table, v.summary);
 
     expect(form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))).toBe(
       false,
@@ -83,7 +83,6 @@ describe("Application", (): void => {
     expect(form.querySelector("#workbook-file-error")).toBeNull();
     expect(form.hidden).toBe(true);
     expect(v.screen.hidden).toBe(false);
-    expect(v.heading.textContent).toBe("lots.xlsx — 1 held lots");
     const update = vi.spyOn(v.summary, "update");
     const config = parameters();
     const price = config.prices.get("AAA");
@@ -104,11 +103,5 @@ describe("Application", (): void => {
     app.configure(null);
     expect(clear).toHaveBeenCalledOnce();
     app.configure(config);
-    app.replace();
-    expect(v.screen.hidden).toBe(true);
-    expect(form.hidden).toBe(false);
-    expect(v.heading.textContent).toBe("");
-    app.configure(config);
-    expect(update.mock.lastCall?.[0]).toEqual([]);
   });
 });
