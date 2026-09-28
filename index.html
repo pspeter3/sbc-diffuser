@@ -25,6 +25,50 @@
         <small id="workbook-help"> E*TRADE By Benefit Type workbook. </small>
         <button type="submit">Import workbook</button>
       </form>
+      <section id="planner" hidden aria-labelledby="planner-heading">
+        <h2 id="planner-heading">Lot viewer</h2>
+        <details open>
+          <summary>Configuration</summary>
+          <form id="planner-form" aria-describedby="configuration-help">
+            <div id="stock-prices"></div>
+            <label for="wealth">Investable wealth excluding workbook holdings (USD)</label>
+            <input id="wealth" type="number" min="0" step="any" required />
+            <label for="target">Desired wealth concentration (%)</label>
+            <input id="target" type="number" min="0" max="100" step="any" required />
+            <small id="configuration-help"
+              >Submitting new parameters replaces manual selections with a new
+              recommendation.</small
+            >
+            <button type="submit">Update plan</button>
+          </form>
+        </details>
+        <details open>
+          <summary>Sale plan summary</summary>
+          <section aria-label="Sale plan summary" id="summary" aria-live="polite"></section>
+        </details>
+        <details open>
+          <summary>Lot selectors</summary>
+          <div class="overflow-auto" tabindex="0" role="region" aria-label="Held RSU lots">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Plan to sell</th>
+                  <th scope="col">Symbol</th>
+                  <th scope="col">Vest date</th>
+                  <th scope="col">Grant number</th>
+                  <th scope="col">Vest period</th>
+                  <th scope="col">Shares</th>
+                  <th scope="col">Estimated basis/share</th>
+                  <th scope="col">Proceeds</th>
+                  <th scope="col">Estimated gain/loss</th>
+                  <th scope="col">Block status</th>
+                </tr>
+              </thead>
+              <tbody id="lot-rows"></tbody>
+            </table>
+          </div>
+        </details>
+      </section>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>

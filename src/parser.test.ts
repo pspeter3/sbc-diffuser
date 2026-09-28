@@ -62,6 +62,7 @@ describe("RSU parser", () => {
       symbol: "EXAMPLE",
       vestDate: "2025-09-20",
       releaseDate: "2025-09-22",
+      blocked: false,
       quantity: new BigNumber("10.125"),
       estimatedCostBasisPerShare: new BigNumber("12.34567890123456789"),
     });

@@ -143,6 +143,7 @@ const parser = z.pipe(
         symbol: result.data.symbol,
         vestDate: result.data.vestDate,
         releaseDate: result.data.releaseDate,
+        blocked: !result.data.sellableQuantity.isGreaterThan(0),
         estimatedCostBasisPerShare: result.data.estimatedCostBasisPerShare,
         quantity: result.data.sellableQuantity.isGreaterThan(0)
           ? result.data.sellableQuantity

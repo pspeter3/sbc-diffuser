@@ -1,6 +1,6 @@
 import { type RsuLotList } from "./schema.ts";
 
-export type OnParseRsuLotList = (lots: RsuLotList) => void;
+export type OnParseRsuLotList = (lots: RsuLotList, filename: string) => void;
 
 export class WorkbookFormView {
   readonly #form: HTMLFormElement;
@@ -85,7 +85,7 @@ export class WorkbookFormView {
         import("read-excel-file/browser"),
         import("./parser.ts"),
       ]);
-      this.#onParseRsuLotList(parseRsuLotList(await readXlsxFile(file)));
+      this.#onParseRsuLotList(parseRsuLotList(await readXlsxFile(file)), file.name);
     } catch (error) {
       this.#setError(error);
     } finally {
