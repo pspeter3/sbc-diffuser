@@ -35,7 +35,6 @@ function formWithFile(): {
     <small id="workbook-help">Workbook help</small>
     <button type="submit">Import</button>
   `;
-  document.body.append(form);
   const input = form.elements.namedItem("workbook");
   const button = form.querySelector("button");
   if (!(input instanceof HTMLInputElement) || !(button instanceof HTMLButtonElement)) {
@@ -59,7 +58,6 @@ function chooseFile(input: HTMLInputElement): File {
 }
 
 beforeEach((): void => {
-  document.body.replaceChildren();
   vi.resetAllMocks();
 });
 
@@ -110,8 +108,9 @@ describe("WorkbookFormView", (): void => {
     expect(button.disabled).toBe(false);
     expect(button.hasAttribute("aria-busy")).toBe(false);
     expect(input.hasAttribute("aria-invalid")).toBe(false);
+    const focus = vi.spyOn(input, "focus");
     view.focus();
-    expect(document.activeElement).toBe(input);
+    expect(focus).toHaveBeenCalledOnce();
   });
 
   it("shows a parse error beside the file and clears it on reset", async (): Promise<void> => {
