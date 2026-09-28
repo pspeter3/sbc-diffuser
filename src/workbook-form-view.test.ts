@@ -64,6 +64,20 @@ beforeEach((): void => {
 });
 
 describe("WorkbookFormView", (): void => {
+  it("requires a workbook input and submit button", (): void => {
+    const { form, input, button } = formWithFile();
+    input.remove();
+    expect(() => new WorkbookFormView(form, ignoreImport)).toThrow(
+      "The workbook form needs a file input and submit button",
+    );
+
+    form.append(input);
+    button.remove();
+    expect(() => new WorkbookFormView(form, ignoreImport)).toThrow(
+      "The workbook form needs a file input and submit button",
+    );
+  });
+
   it("prompts for a missing file", async (): Promise<void> => {
     const { form, input } = formWithFile();
     new WorkbookFormView(form, ignoreImport);
@@ -82,6 +96,10 @@ describe("WorkbookFormView", (): void => {
     });
     vi.mocked(readXlsxFile).mockReturnValue(pendingRead);
     const view = new WorkbookFormView(form, ignoreImport);
+
+    submit(form);
+    expect(button.disabled).toBe(true);
+    expect(button.getAttribute("aria-busy")).toBe("true");
 
     submit(form);
     expect(button.disabled).toBe(true);
