@@ -188,6 +188,59 @@ status. Use proper CSV escaping and protect workbook-derived text from spreadshe
 formula interpretation. Disable export when inputs are invalid or no lots are
 selected. Generate the download locally without a server.
 
+## Application and view architecture
+
+Use an `Application` class to coordinate app-specific DOM views through explicit
+method calls and user-action callbacks. Keep vanilla TypeScript, Pico CSS,
+persistent HTML, and in-memory session state; no new architectural dependency is
+required. This section specifies future implementation.
+
+### Responsibilities
+
+- **Application:** owns the workbook, valid planning parameters, selected lot
+  identities, and active screen. Orchestrates asynchronous import, domain
+  calculations, screen transitions, and session reset.
+- **WorkbookFormView:** wraps the import form, reports submitted files, and
+  exposes methods for loading, errors, reset, and focus.
+- **PlannerFormView:** wraps parameter controls, reads and validates input using
+  DOM-independent validation functions, and reports valid parameters or an
+  invalid state. Exposes reset and focus methods.
+- **LotTableView:** renders held lots, reports lot identity and checked state on
+  checkbox changes, and exposes methods to update calculated cells, checked
+  states, and selection availability.
+- **SummaryView:** displays calculated statistics and clears them when
+  parameters are invalid.
+
+Keep parsing, validation, recommendation, and selection calculations independent
+of the DOM. Use independent concrete view classes, with no shared base class,
+separate ViewModel, generic Form/Table abstraction, or subscription mechanism.
+Views do not reference each other or Application; they receive callbacks for
+user actions and expose methods that Application calls.
+
+### State and DOM lifecycle
+
+Construct views once around elements declared in `index.html`. Keep startup code
+limited to DOM lookup, view construction, and Application initialization.
+Application toggles screen roots using `hidden` and invokes the appropriate
+view's focus method after switching screens.
+
+Keep raw field values and displayed validation in the form views. Application
+stores only valid domain parameters; invalid input clears those parameters,
+suppresses calculated results, and disables selection and any implemented export.
+
+Application owns the import-in-progress guard and directs the import form's
+loading state. Failed imports retain the import screen and display useful
+diagnostics. Successful import stores the workbook, initializes the planner
+views, and reveals the planner.
+
+Build date-sorted table rows once per workbook. Update calculated cells and
+checkbox states in place to preserve keyboard focus. Valid parameter changes
+replace manual selections with a fresh recommendation. Checkbox changes update
+Application's selection and summary without changing other selections.
+
+Replacing the workbook clears session state and resets all views before
+returning focus to the import form.
+
 ## Implementation sequence
 
 1. **Adapt the domain code.** Bring the relevant snapshot types, parser, and
@@ -198,10 +251,14 @@ selected. Generate the download locally without a server.
    grouping and recommendation, and calculations for an arbitrary selection.
    Use stable grant-number/vest-period identities for checkbox state. Adapt
    Node-specific or unsupported iterator usage for the project's browser target.
-3. **Build the import flow.** Replace the starter content with the two static
-   screen sections, import status, validation errors, and screen transitions.
-4. **Build the planner.** Wire validated inputs, date-sorted rows, individual
-   checkboxes, automatic replacement of selections, and live summaries.
+3. **Build the import flow.** Declare the two persistent screen sections and
+   construct `WorkbookFormView` and `Application`. Coordinate import loading,
+   duplicate prevention, validation errors, screen visibility, and focus through
+   the architecture above.
+4. **Build the planner.** Construct `PlannerFormView`, `LotTableView`, and
+   `SummaryView`. Connect validated-input and checkbox callbacks to Application's
+   state and domain calculations. Implement automatic replacement of selections,
+   in-place table updates, live summaries, and complete workbook replacement reset.
 5. **Polish and verify.** Check empty holdings, invalid inputs, blocked lots,
    keyboard access, narrow layouts, and workbook replacement. Remove unused
    starter assets and counter code as part of replacing the starter experience.
@@ -224,9 +281,14 @@ Cover the behaviors that establish correctness:
 - Missing basis or vest dates, already-at-target portfolios, zero wealth, and
   concentration targets of 0% and 100%.
 - Manual individual-lot selection and accurate summary calculations.
-- Parameter edits replacing manual selections, including invalid-to-valid edits.
+- Valid and invalid form callbacks, parameter edits replacing manual selections,
+  and invalid-to-valid edits restoring fresh recommendations.
 - Date-sorted display independent of recommendation ranking.
-- Import failure recovery and replacement of the active workbook.
+- Import loading, duplicate prevention, failure recovery, successful screen
+  transition, and replacement clearing session state and resetting every view.
+- View rendering, safe workbook text insertion, accessible validation, and focus
+  preservation during table updates and appropriate focus after screen changes.
+- Application coordination using substitute views and domain dependencies.
 - CSV contents, escaping, and selection fidelity if export is implemented.
 
 Retain the repository's configured coverage requirements. Run `npm test` after
