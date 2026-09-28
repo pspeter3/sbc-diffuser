@@ -6,7 +6,6 @@ import { Application } from "./application.ts";
 vi.mock("read-excel-file/browser", () => ({ default: vi.fn() }));
 
 beforeEach((): void => {
-  document.body.replaceChildren();
   vi.resetAllMocks();
 });
 
@@ -19,11 +18,11 @@ describe("Application", (): void => {
     const button = document.createElement("button");
     button.type = "submit";
     form.append(input, button);
-    document.body.append(form);
+    const focus = vi.spyOn(input, "focus");
 
     new Application(form);
 
-    expect(document.activeElement).toBe(input);
+    expect(focus).toHaveBeenCalledOnce();
   });
 
   it("imports a workbook through the form without showing an error", async (): Promise<void> => {
@@ -35,7 +34,6 @@ describe("Application", (): void => {
     const button = document.createElement("button");
     button.type = "submit";
     form.append(input, button);
-    document.body.append(form);
 
     const headers: string[] = Array.from({ length: 62 }, () => "");
     for (const [index, label] of [

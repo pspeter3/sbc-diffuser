@@ -2,6 +2,11 @@ import { defineConfig } from "vite-plus";
 
 export default defineConfig({
   base: "/sbc-diffuser/",
+  css: {
+    preprocessorOptions: {
+      scss: { quietDeps: true },
+    },
+  },
   staged: {
     "*": "vp check --fix",
   },
