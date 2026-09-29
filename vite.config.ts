@@ -14,7 +14,7 @@ export default defineConfig({
   },
   fmt: { sortImports: true },
   lint: {
-    plugins: ["import", "typescript", "unicorn"],
+    plugins: ["import", "jsx-a11y", "react", "typescript", "unicorn"],
     jsPlugins: [{ name: "vite-plus", specifier: "vite-plus/oxlint-plugin" }],
     rules: {
       "vite-plus/prefer-vite-plus-imports": "error",
@@ -41,6 +41,10 @@ export default defineConfig({
         "error",
         { allowNullableObject: false, allowNumber: false, allowString: false },
       ],
+      "react/rules-of-hooks": "error",
+      "react/exhaustive-deps": "error",
+      "react/jsx-key": "error",
+      "react/jsx-no-duplicate-props": "error",
       "unicorn/prefer-add-event-listener": "error",
     },
     overrides: [

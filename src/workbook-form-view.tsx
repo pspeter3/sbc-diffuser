@@ -24,6 +24,7 @@ export function WorkbookFormView({
       setError("Choose an .xlsx workbook to import.");
       return;
     }
+    // oxlint-disable-next-line react/immutability -- The ref synchronously blocks duplicate submits before state updates.
     pending.current = true;
     setLoading(true);
     setError(null);
@@ -48,7 +49,7 @@ export function WorkbookFormView({
         });
       }}
     >
-      <label for="workbook-file">Workbook (.xlsx)</label>
+      <label htmlFor="workbook-file">Workbook (.xlsx)</label>
       <input
         ref={input}
         id="workbook-file"

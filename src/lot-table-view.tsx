@@ -20,7 +20,7 @@ export function LotTableView({
     [lots],
   );
   return (
-    <div class="overflow-auto" tabIndex={0} role="region" aria-label="Held RSU lots">
+    <section class="overflow-auto" aria-label="Held RSU lots">
       <table>
         <thead>
           <tr>
@@ -74,7 +74,7 @@ export function LotTableView({
           })}
         </tbody>
       </table>
-    </div>
+    </section>
   );
 }
 
