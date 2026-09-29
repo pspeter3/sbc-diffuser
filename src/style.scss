@@ -3,3 +3,8 @@
   $semantic-root-element: "#app",
   $enable-semantic-container: true
 );
+
+.numeric-cell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

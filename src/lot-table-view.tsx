@@ -4,6 +4,20 @@ import { useMemo } from "preact/hooks";
 
 import { type RsuLot, type RsuLotList } from "./schema.ts";
 
+const numericColumns: ReadonlySet<string> = new Set([
+  "Vest",
+  "Shares",
+  "Basis",
+  "Proceeds",
+  "Result",
+]);
+const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+
+function formatUsd(value: Readonly<BigNumber>): string {
+  // Intl accepts decimal strings exactly; TypeScript requires a numeric-string type.
+  return String(Reflect.apply((decimal: number) => usd.format(decimal), null, [value.toFixed(2)]));
+}
+
 export function LotTableView({
   lots,
   prices,
@@ -35,7 +49,11 @@ export function LotTableView({
               "Proceeds",
               "Result",
             ].map((label) => (
-              <th key={label} scope="col">
+              <th
+                key={label}
+                scope="col"
+                class={numericColumns.has(label) ? "numeric-cell" : undefined}
+              >
                 {label}
               </th>
             ))}
@@ -56,16 +74,18 @@ export function LotTableView({
                   />
                 </td>
                 <td>{lot.symbol}</td>
-                <td>{lot.vestDate}</td>
+                <td class="numeric-cell">{lot.vestDate}</td>
                 <td>{lot.grantNumber}</td>
                 <td>{lot.vestPeriod}</td>
-                <td>{lot.quantity.toFixed()}</td>
-                <td>{lot.estimatedCostBasisPerShare.toFixed(2)}</td>
-                <td>{price === undefined ? "—" : lot.quantity.times(price).toFixed(2)}</td>
-                <td>
+                <td class="numeric-cell">{lot.quantity.toFixed()}</td>
+                <td class="numeric-cell">{formatUsd(lot.estimatedCostBasisPerShare)}</td>
+                <td class="numeric-cell">
+                  {price === undefined ? "—" : formatUsd(lot.quantity.times(price))}
+                </td>
+                <td class="numeric-cell">
                   {price === undefined
                     ? "—"
-                    : lot.quantity.times(price.minus(lot.estimatedCostBasisPerShare)).toFixed(2)}
+                    : formatUsd(lot.quantity.times(price.minus(lot.estimatedCostBasisPerShare)))}
                 </td>
               </tr>
             );

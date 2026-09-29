@@ -58,7 +58,7 @@ it("sorts lots while preserving their identity and focus across renders", (): vo
       .getAllByRole("row")
       .slice(1)
       .map((row) => row.children[6]?.textContent),
-  ).toEqual(["30.00", "10.00", "10.00", "10.00", "10.00"]);
+  ).toEqual(["$30.00", "$10.00", "$10.00", "$10.00", "$10.00"]);
   expect(boxes[1]?.getAttribute("aria-label")).toContain("vest period 2");
   expect(document.querySelector("script")).toBeNull();
   rerender(
@@ -85,9 +85,45 @@ it("sorts lots while preserving their identity and focus across renders", (): vo
   expect(first.checked).toBe(false);
   fireEvent.click(first);
   expect(onSelection).toHaveBeenCalledWith(4, true);
-  expect(screen.getAllByText("200.00")).toHaveLength(4);
+  expect(screen.getAllByText("$200.00")).toHaveLength(4);
   rerender(<LotTableView lots={[]} prices={null} selected={new Set()} onSelection={onSelection} />);
   expect(screen.queryByRole("checkbox")).toBeNull();
+});
+
+it("aligns dates and numeric cells and formats USD without losing precision", (): void => {
+  const { rerender } = render(
+    <LotTableView
+      lots={[lot("AAA", "2026-01-01", "1000", "100.125")]}
+      prices={parameters().prices}
+      selected={new Set()}
+      onSelection={vi.fn()}
+    />,
+  );
+  const [headers, values] = screen.getAllByRole("row");
+  for (const row of [headers, values]) {
+    expect(row?.children[0]?.classList.contains("numeric-cell")).toBe(false);
+    expect(row?.children[1]?.classList.contains("numeric-cell")).toBe(false);
+    expect(row?.children[3]?.classList.contains("numeric-cell")).toBe(false);
+    expect(row?.children[4]?.classList.contains("numeric-cell")).toBe(false);
+    for (const index of [2, 5, 6, 7, 8]) {
+      expect(row?.children[index]?.classList.contains("numeric-cell")).toBe(true);
+    }
+  }
+  expect(values?.children[2]?.textContent).toBe("2026-01-01");
+  expect(values?.children[5]?.textContent).toBe("100.125");
+  expect(values?.children[6]?.textContent).toBe("$1,000.00");
+  expect(values?.children[7]?.textContent).toBe("$2,002.50");
+  expect(values?.children[8]?.textContent).toBe("-$98,122.50");
+
+  rerender(
+    <LotTableView
+      lots={[lot("AAA", "2026-01-01", "9007199254740993.01", "1")]}
+      prices={null}
+      selected={new Set()}
+      onSelection={vi.fn()}
+    />,
+  );
+  expect(screen.getAllByRole("row")[1]?.children[6]?.textContent).toBe("$9,007,199,254,740,993.01");
 });
 
 it("renders the actual selection and clears stale summaries", (): void => {
