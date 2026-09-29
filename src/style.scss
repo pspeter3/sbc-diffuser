@@ -1,5 +1,39 @@
+@use "@picocss/pico/scss/colors" as colors;
 @use "@picocss/pico/scss/pico" with (
   $theme-color: "indigo",
   $semantic-root-element: "#app",
   $enable-semantic-container: true
 );
+
+.numeric-cell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.gain-positive {
+  color: light-dark(colors.$green-550, colors.$green-250);
+}
+
+.gain-negative {
+  color: light-dark(colors.$red-550, colors.$red-300);
+}
+
+.summary-table caption {
+  text-align: left;
+}
+
+.summary-table caption small {
+  display: block;
+}
+
+.summary-caption-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.5rem 1rem;
+  margin: 0.5rem 0 0;
+}
+
+.summary-caption-details dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}

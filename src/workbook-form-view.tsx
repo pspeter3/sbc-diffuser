@@ -60,7 +60,7 @@ export function WorkbookFormView({
       {error !== null && <small id="workbook-file-error">{error}</small>}
       <small id="workbook-help">E*TRADE By Benefit Type workbook.</small>
       <button type="submit" disabled={loading} aria-busy={loading ? true : undefined}>
-        Import workbook
+        Import
       </button>
     </form>
   );

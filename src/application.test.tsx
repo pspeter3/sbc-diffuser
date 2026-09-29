@@ -16,7 +16,8 @@ it("imports, configures, selects manually, and replaces selections on submission
   fireEvent.submit(screen.getByRole("form"));
   const price = await screen.findByLabelText(/^TEST/);
   expect(screen.queryByLabelText("Workbook (.xlsx)")).toBeNull();
-  expect([...document.querySelectorAll("details")].every((section) => section.open)).toBe(true);
+  const details = [...document.querySelectorAll("details")];
+  expect(details.map((section) => section.open)).toEqual([true, false, false]);
   const checkbox = screen.getByRole<HTMLInputElement>("checkbox");
   expect(checkbox.disabled).toBe(true);
   const summary = screen.getByText("Summary").closest("details");
@@ -27,22 +28,27 @@ it("imports, configures, selects manually, and replaces selections on submission
   fireEvent.input(screen.getByLabelText("Concentration"), { target: { value: "50" } });
   const update = screen.getByRole("button", { name: "Recommend" });
   fireEvent.click(update);
+  expect(details.map((section) => section.open)).toEqual([false, true, true]);
   expect(checkbox.checked).toBe(true);
   expect(within(summary).getByText("Selection meets the target")).toBeTruthy();
+  summary.open = false;
+  if (details[0] === undefined) throw new Error("Missing configuration details");
+  details[0].open = true;
   checkbox.focus();
   fireEvent.click(checkbox);
   expect(checkbox.checked).toBe(false);
   expect(document.activeElement).toBe(checkbox);
+  expect(details.map((section) => section.open)).toEqual([true, false, true]);
   expect(within(summary).getByText("Selection does not meet the target")).toBeTruthy();
   fireEvent.input(price, { target: { value: "80" } });
-  expect(
-    within(summary).getByText("Current stock value (USD)").nextElementSibling?.textContent,
-  ).toBe("400.00");
+  expect(within(summary).getByRole("row", { name: /^Total / }).children[2]?.textContent).toBe(
+    "$400.00",
+  );
   fireEvent.click(checkbox);
   expect(checkbox.checked).toBe(true);
   expect(price).toHaveProperty("value", "80");
-  expect(within(summary).getByText("Selected proceeds (USD)").nextElementSibling?.textContent).toBe(
-    "400.00",
+  expect(within(summary).getByRole("row", { name: /^Total / }).children[5]?.textContent).toBe(
+    "$400.00",
   );
   fireEvent.click(checkbox);
   fireEvent.input(price, { target: { value: "0" } });
@@ -52,6 +58,7 @@ it("imports, configures, selects manually, and replaces selections on submission
   expect(checkbox.checked).toBe(false);
   fireEvent.input(price, { target: { value: "40" } });
   fireEvent.click(update);
+  expect(details.map((section) => section.open)).toEqual([false, true, true]);
   expect(checkbox.checked).toBe(true);
 });
 
