@@ -17,8 +17,6 @@ export interface SymbolSummary {
   proceeds: BigNumber;
   basis: BigNumber;
   gain: BigNumber;
-  remainingShares: BigNumber;
-  remainingValue: BigNumber;
 }
 
 export function decimalInput(value: string, maximum?: number): BigNumber | null {
@@ -33,11 +31,7 @@ export function priceFor(parameters: Parameters, symbol: string): BigNumber {
   return price;
 }
 
-export function summarize(
-  lots: RsuLotList,
-  parameters: Parameters,
-  selected: ReadonlySet<number>,
-): {
+export interface Summary {
   bySymbol: ReadonlyMap<string, SymbolSummary>;
   shares: BigNumber;
   value: BigNumber;
@@ -48,18 +42,15 @@ export function summarize(
   proceeds: BigNumber;
   basis: BigNumber;
   gain: BigNumber;
-  remainingShares: BigNumber;
-  remainingValue: BigNumber;
   ending: BigNumber;
-  meetsTarget: boolean;
-} {
-  const positions = new Map<
-    string,
-    Pick<
-      SymbolSummary,
-      "lots" | "shares" | "value" | "selectedLots" | "selectedShares" | "proceeds" | "basis"
-    >
-  >();
+}
+
+export function summarize(
+  lots: RsuLotList,
+  parameters: Parameters,
+  selected: ReadonlySet<number>,
+): Summary {
+  const positions = new Map<string, Omit<SymbolSummary, "gain">>();
   let shares = new BigNumber(0);
   let value = new BigNumber(0);
   let selectedShares = new BigNumber(0);
@@ -79,26 +70,24 @@ export function summarize(
     position.lots += 1;
     position.shares = position.shares.plus(lot.quantity);
     position.value = position.value.plus(lotValue);
-    shares = shares.plus(lot.quantity);
-    value = value.plus(lotValue);
     if (selected.has(index)) {
       position.selectedLots += 1;
       position.selectedShares = position.selectedShares.plus(lot.quantity);
       position.proceeds = position.proceeds.plus(lotValue);
       position.basis = position.basis.plus(lot.quantity.times(lot.estimatedCostBasisPerShare));
-      selectedShares = selectedShares.plus(lot.quantity);
-      proceeds = proceeds.plus(lotValue);
-      basis = basis.plus(lot.quantity.times(lot.estimatedCostBasisPerShare));
     }
     positions.set(lot.symbol, position);
   });
   const bySymbol = new Map<string, SymbolSummary>();
   for (const [symbol, position] of positions) {
+    shares = shares.plus(position.shares);
+    value = value.plus(position.value);
+    selectedShares = selectedShares.plus(position.selectedShares);
+    proceeds = proceeds.plus(position.proceeds);
+    basis = basis.plus(position.basis);
     bySymbol.set(symbol, {
       ...position,
       gain: position.proceeds.minus(position.basis),
-      remainingShares: position.shares.minus(position.selectedShares),
-      remainingValue: position.value.minus(position.proceeds),
     });
   }
   const total = value.plus(parameters.wealth);
@@ -115,10 +104,7 @@ export function summarize(
     proceeds,
     basis,
     gain: proceeds.minus(basis),
-    remainingShares: shares.minus(selectedShares),
-    remainingValue,
     ending: total.isZero() ? new BigNumber(0) : remainingValue.times(100).div(total),
-    meetsTarget: proceeds.gte(minimum),
   };
 }
 

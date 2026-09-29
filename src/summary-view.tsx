@@ -2,8 +2,7 @@ import { type BigNumber } from "bignumber.js";
 import { type JSX } from "preact";
 
 import { formatUsd } from "./format.ts";
-import { type Parameters, summarize } from "./planner.ts";
-import { type RsuLotList } from "./schema.ts";
+import { type Summary } from "./planner.ts";
 
 function gainCellClass(gain: Readonly<BigNumber>): string {
   if (gain.gt(0)) return "numeric-cell gain-positive";
@@ -13,17 +12,12 @@ function gainCellClass(gain: Readonly<BigNumber>): string {
 
 export function SummaryView({
   kind,
-  lots,
-  parameters,
-  selected,
+  summary,
 }: {
   kind: "Portfolio" | "Sale";
-  lots: RsuLotList;
-  parameters: Parameters | null;
-  selected: ReadonlySet<number>;
+  summary: Summary | null;
 }): JSX.Element | null {
-  if (parameters === null) return null;
-  const summary = summarize(lots, parameters, selected);
+  if (summary === null) return null;
   const portfolio = kind === "Portfolio";
   const symbols = [...summary.bySymbol]
     .filter(([, position]) => portfolio || position.selectedLots > 0)

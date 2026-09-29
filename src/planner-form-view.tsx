@@ -1,5 +1,5 @@
 import { type BigNumber } from "bignumber.js";
-import { type JSX, type TargetedSubmitEvent } from "preact";
+import { type JSX, type TargetedInputEvent, type TargetedSubmitEvent } from "preact";
 
 import { decimalInput, type Parameters } from "./planner.ts";
 
@@ -34,20 +34,17 @@ export function PlannerFormView({
       onSubmit({ prices, wealth, target });
     else event.currentTarget.reportValidity();
   }
+  function clearValidity(event: TargetedInputEvent<HTMLInputElement>): void {
+    event.currentTarget.setCustomValidity("");
+    event.currentTarget.removeAttribute("aria-invalid");
+  }
   return (
-    <form
-      onSubmit={submit}
-      onInput={(event) => {
-        if (event.target instanceof HTMLInputElement) {
-          event.target.setCustomValidity("");
-          event.target.removeAttribute("aria-invalid");
-        }
-      }}
-    >
+    <form onSubmit={submit}>
       {symbols.map((symbol) => (
         <label key={symbol}>
           {symbol}
           <input
+            onInput={clearValidity}
             name={`price:${symbol}`}
             type="number"
             min="0"
@@ -60,6 +57,7 @@ export function PlannerFormView({
       ))}
       <label htmlFor="wealth">Wealth</label>
       <input
+        onInput={clearValidity}
         id="wealth"
         name="wealth"
         type="number"
@@ -71,6 +69,7 @@ export function PlannerFormView({
       <small id="wealth-helper">Investable wealth excluding workbook holdings (USD)</small>
       <label htmlFor="target">Concentration</label>
       <input
+        onInput={clearValidity}
         id="target"
         name="target"
         type="number"
