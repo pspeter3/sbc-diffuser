@@ -14,18 +14,18 @@ it("imports, configures, selects manually, and replaces selections on submission
     target: { files: [new File([], "lots.xlsx")] },
   });
   fireEvent.submit(screen.getByRole("form"));
-  const price = await screen.findByLabelText("TEST stock price (USD per share)");
-  expect(document.activeElement).toBe(price);
+  const price = await screen.findByLabelText(/^TEST/);
   expect(screen.queryByLabelText("Workbook (.xlsx)")).toBeNull();
   expect([...document.querySelectorAll("details")].every((section) => section.open)).toBe(true);
   const checkbox = screen.getByRole<HTMLInputElement>("checkbox");
   expect(checkbox.disabled).toBe(true);
-  const summary = screen.getByRole("region", { name: "Sale plan summary" });
-  expect(summary.textContent).toBe("");
+  const summary = screen.getByText("Summary").closest("details");
+  if (summary === null) throw new Error("Missing summary details");
+  expect(summary.textContent).toBe("Summary");
   fireEvent.input(price, { target: { value: "40" } });
-  fireEvent.input(screen.getByLabelText(/Investable wealth/), { target: { value: "0" } });
-  fireEvent.input(screen.getByLabelText(/Desired wealth/), { target: { value: "50" } });
-  const update = screen.getByRole("button", { name: "Update plan" });
+  fireEvent.input(screen.getByLabelText("Wealth"), { target: { value: "0" } });
+  fireEvent.input(screen.getByLabelText("Concentration"), { target: { value: "50" } });
+  const update = screen.getByRole("button", { name: "Recommend" });
   fireEvent.click(update);
   expect(checkbox.checked).toBe(true);
   expect(within(summary).getByText("Selection meets the target")).toBeTruthy();
@@ -46,7 +46,9 @@ it("imports, configures, selects manually, and replaces selections on submission
   );
   fireEvent.click(checkbox);
   fireEvent.input(price, { target: { value: "0" } });
-  fireEvent.submit(screen.getByRole("form"));
+  const form = update.closest("form");
+  if (form === null) throw new Error("Missing planner form");
+  fireEvent.submit(form);
   expect(checkbox.checked).toBe(false);
   fireEvent.input(price, { target: { value: "40" } });
   fireEvent.click(update);
@@ -71,8 +73,8 @@ it("only asks for prices for symbols with held lots", async (): Promise<void> =>
     target: { files: [new File([], "lots.xlsx")] },
   });
   fireEvent.submit(screen.getByRole("form", { name: "Workbook import" }));
-  await screen.findByLabelText("TEST stock price (USD per share)");
-  expect(screen.queryByLabelText("EMPTY stock price (USD per share)")).toBeNull();
+  await screen.findByLabelText(/^TEST/);
+  expect(screen.queryByLabelText(/^EMPTY/)).toBeNull();
   expect(screen.getAllByRole("checkbox")).toHaveLength(1);
 });
 
@@ -88,12 +90,11 @@ it.each(["empty", "zero-quantity"])("supports a %s workbook", async (kind): Prom
     target: { files: [new File([], "empty.xlsx")] },
   });
   fireEvent.submit(screen.getByRole("form"));
-  const wealth = await screen.findByLabelText(/Investable wealth/);
-  expect(document.activeElement).toBe(wealth);
-  expect(screen.queryByLabelText("TEST stock price (USD per share)")).toBeNull();
+  const wealth = await screen.findByLabelText("Wealth");
+  expect(screen.queryByLabelText(/^TEST/)).toBeNull();
   expect(screen.queryByRole("checkbox")).toBeNull();
   fireEvent.input(wealth, { target: { value: "0" } });
-  fireEvent.input(screen.getByLabelText(/Desired wealth/), { target: { value: "0" } });
-  fireEvent.click(screen.getByRole("button", { name: "Update plan" }));
+  fireEvent.input(screen.getByLabelText("Concentration"), { target: { value: "0" } });
+  fireEvent.click(screen.getByRole("button", { name: "Recommend" }));
   expect(screen.getByText("Selection meets the target")).toBeTruthy();
 });

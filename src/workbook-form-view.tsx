@@ -1,5 +1,5 @@
 import { type JSX } from "preact";
-import { useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useRef, useState } from "preact/hooks";
 import readXlsxFile from "read-excel-file/browser";
 
 import { parseRsuLotList } from "./parser.ts";
@@ -14,9 +14,6 @@ export function WorkbookFormView({
   const pending = useRef(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  useLayoutEffect(() => {
-    input.current?.focus();
-  }, []);
   async function submit(): Promise<void> {
     if (pending.current) return;
     const file = input.current?.files?.[0];

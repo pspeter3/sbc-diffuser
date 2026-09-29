@@ -25,16 +25,15 @@ export function LotTableView({
         <thead>
           <tr>
             {[
-              "Plan to sell",
+              "Sell",
               "Symbol",
-              "Vest date",
-              "Grant number",
-              "Vest period",
+              "Vest",
+              "Grant",
+              "Period",
               "Shares",
-              "Estimated basis/share",
+              "Basis",
               "Proceeds",
-              "Estimated gain/loss",
-              "Block status",
+              "Result",
             ].map((label) => (
               <th key={label} scope="col">
                 {label}
@@ -68,7 +67,6 @@ export function LotTableView({
                     ? "—"
                     : lot.quantity.times(price.minus(lot.estimatedCostBasisPerShare)).toFixed(2)}
                 </td>
-                <td>{lot.blocked ? "Blocked" : "Sellable"}</td>
               </tr>
             );
           })}

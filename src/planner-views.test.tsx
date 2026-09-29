@@ -9,11 +9,13 @@ import { SummaryView } from "./summary-view.tsx";
 it("validates all parameters and safely labels each symbol", (): void => {
   const submit = vi.fn();
   render(<PlannerFormView symbols={["AAA", "<img src=x>"]} onSubmit={submit} />);
-  const price = screen.getByLabelText<HTMLInputElement>("AAA stock price (USD per share)");
-  const other = screen.getByLabelText("<img src=x> stock price (USD per share)");
+  const price = screen.getByLabelText<HTMLInputElement>(/^AAA/);
+  const other = screen.getByLabelText(/^<img src=x>/);
   expect(document.querySelector("img")).toBeNull();
-  expect(document.activeElement).toBe(price);
-  const form = screen.getByRole("form");
+  expect(price.getAttribute("aria-describedby")).toBe("AAA-helper");
+  expect(screen.getAllByText("Price per share (USD)")).toHaveLength(2);
+  const form = screen.getByRole("button", { name: "Recommend" }).closest("form");
+  if (form === null) throw new Error("Missing planner form");
   fireEvent.submit(form);
   expect(submit).not.toHaveBeenCalled();
   expect(price.validationMessage).toBe("Enter a positive stock price.");
@@ -21,11 +23,11 @@ it("validates all parameters and safely labels each symbol", (): void => {
   expect(price.hasAttribute("aria-invalid")).toBe(false);
   expect(price.validationMessage).toBe("");
   fireEvent.input(other, { target: { value: "40" } });
-  fireEvent.input(screen.getByLabelText(/Investable wealth/), { target: { value: "0" } });
-  fireEvent.input(screen.getByLabelText(/Desired wealth/), { target: { value: "101" } });
+  fireEvent.input(screen.getByLabelText("Wealth"), { target: { value: "0" } });
+  fireEvent.input(screen.getByLabelText("Concentration"), { target: { value: "101" } });
   fireEvent.submit(form);
   expect(submit).not.toHaveBeenCalled();
-  fireEvent.input(screen.getByLabelText(/Desired wealth/), { target: { value: "50" } });
+  fireEvent.input(screen.getByLabelText("Concentration"), { target: { value: "50" } });
   fireEvent.input(form);
   fireEvent.submit(form);
   expect(submit.mock.lastCall?.[0]).toEqual({
@@ -59,7 +61,6 @@ it("sorts lots while preserving their identity and focus across renders", (): vo
   ).toEqual(["30.00", "10.00", "10.00", "10.00", "10.00"]);
   expect(boxes[1]?.getAttribute("aria-label")).toContain("vest period 2");
   expect(document.querySelector("script")).toBeNull();
-  expect(screen.getByText("Blocked")).toBeTruthy();
   rerender(
     <LotTableView
       lots={lots}
