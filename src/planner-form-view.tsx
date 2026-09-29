@@ -58,9 +58,9 @@ export function PlannerFormView({
           <input name={`price:${symbol}`} type="number" min="0" step="any" required />
         </label>
       ))}
-      <label for="wealth">Investable wealth excluding workbook holdings (USD)</label>
+      <label htmlFor="wealth">Investable wealth excluding workbook holdings (USD)</label>
       <input id="wealth" name="wealth" type="number" min="0" step="any" required />
-      <label for="target">Desired wealth concentration (%)</label>
+      <label htmlFor="target">Desired wealth concentration (%)</label>
       <input id="target" name="target" type="number" min="0" max="100" step="any" required />
       <small id="configuration-help">
         Submitting new parameters replaces manual selections with a new recommendation.
