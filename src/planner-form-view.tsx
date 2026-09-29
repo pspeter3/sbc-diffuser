@@ -1,6 +1,5 @@
 import { type BigNumber } from "bignumber.js";
 import { type JSX, type TargetedSubmitEvent } from "preact";
-import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { decimalInput, type Parameters } from "./planner.ts";
 
@@ -11,10 +10,6 @@ export function PlannerFormView({
   symbols: ReadonlyArray<string>;
   onSubmit: (parameters: Parameters) => void;
 }): JSX.Element {
-  const form = useRef<HTMLFormElement>(null);
-  useLayoutEffect(() => {
-    form.current?.querySelector("input")?.focus();
-  }, []);
   function submit(event: TargetedSubmitEvent<HTMLFormElement>): void {
     event.preventDefault();
     const inputs = [...event.currentTarget.querySelectorAll("input")];
@@ -41,9 +36,6 @@ export function PlannerFormView({
   }
   return (
     <form
-      ref={form}
-      aria-label="Planning parameters"
-      aria-describedby="configuration-help"
       onSubmit={submit}
       onInput={(event) => {
         if (event.target instanceof HTMLInputElement) {
@@ -54,18 +46,42 @@ export function PlannerFormView({
     >
       {symbols.map((symbol) => (
         <label key={symbol}>
-          {symbol} stock price (USD per share)
-          <input name={`price:${symbol}`} type="number" min="0" step="any" required />
+          {symbol}
+          <input
+            name={`price:${symbol}`}
+            type="number"
+            min="0"
+            step="any"
+            required
+            aria-describedby={`${symbol}-helper`}
+          />
+          <small id={`${symbol}-helper`}>Price per share (USD)</small>
         </label>
       ))}
-      <label htmlFor="wealth">Investable wealth excluding workbook holdings (USD)</label>
-      <input id="wealth" name="wealth" type="number" min="0" step="any" required />
-      <label htmlFor="target">Desired wealth concentration (%)</label>
-      <input id="target" name="target" type="number" min="0" max="100" step="any" required />
-      <small id="configuration-help">
-        Submitting new parameters replaces manual selections with a new recommendation.
-      </small>
-      <button type="submit">Update plan</button>
+      <label htmlFor="wealth">Wealth</label>
+      <input
+        id="wealth"
+        name="wealth"
+        type="number"
+        min="0"
+        step="any"
+        required
+        aria-describedby="wealth-helper"
+      />
+      <small id="wealth-helper">Investable wealth excluding workbook holdings (USD)</small>
+      <label htmlFor="target">Concentration</label>
+      <input
+        id="target"
+        name="target"
+        type="number"
+        min="0"
+        max="100"
+        step="any"
+        required
+        aria-describedby="target-helper"
+      />
+      <small id="target-helper">Desired wealth concentration (%)</small>
+      <button type="submit">Recommend</button>
     </form>
   );
 }

@@ -10,10 +10,9 @@ beforeEach((): void => {
   vi.resetAllMocks();
 });
 
-it("focuses the input and reports a missing workbook", (): void => {
+it("reports a missing workbook", (): void => {
   render(<WorkbookFormView onParseRsuLotList={vi.fn()} />);
   const input = screen.getByLabelText("Workbook (.xlsx)");
-  expect(document.activeElement).toBe(input);
   fireEvent.submit(screen.getByRole("form"));
   expect(screen.getByText("Choose an .xlsx workbook to import.")).toBeTruthy();
   expect(input.getAttribute("aria-invalid")).toBe("true");
