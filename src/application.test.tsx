@@ -36,7 +36,9 @@ it("imports, configures, selects manually, and replaces selections on submission
   fireEvent.click(update);
   expect(details.map((section) => section.open)).toEqual([false, true, true, true]);
   expect(checkbox.checked).toBe(true);
-  expect(within(summary).queryByText("Target")).toBeNull();
+  expect(
+    within(summary).getByRole("row", { name: "Total 1 10 $400.00 $250.00 $150.00" }),
+  ).toBeTruthy();
   summary.open = false;
   if (details[0] === undefined) throw new Error("Missing configuration details");
   details[0].open = true;
@@ -45,7 +47,7 @@ it("imports, configures, selects manually, and replaces selections on submission
   expect(checkbox.checked).toBe(false);
   expect(document.activeElement).toBe(checkbox);
   expect(details.map((section) => section.open)).toEqual([true, true, false, true]);
-  expect(within(summary).queryByText("Target")).toBeNull();
+  expect(within(summary).getByRole("row", { name: "Total 0 0 $0.00 $0.00 $0.00" })).toBeTruthy();
   fireEvent.input(price, { target: { value: "80" } });
   expect(within(summary).getByRole("row", { name: /^Total / }).children[3]?.textContent).toBe(
     "$0.00",
@@ -109,5 +111,9 @@ it.each(["empty", "zero-quantity"])("supports a %s workbook", async (kind): Prom
   fireEvent.input(wealth, { target: { value: "0" } });
   fireEvent.input(screen.getByLabelText("Concentration"), { target: { value: "0" } });
   fireEvent.click(screen.getByRole("button", { name: "Recommend" }));
-  expect(screen.queryByText("Target")).toBeNull();
+  expect(
+    within(screen.getByRole("region", { name: "Sale summary" })).getByRole("row", {
+      name: "Total 0 0 $0.00 $0.00 $0.00",
+    }),
+  ).toBeTruthy();
 });

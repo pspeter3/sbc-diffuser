@@ -25,10 +25,10 @@ describe("planning", (): void => {
     expect(summary.value.toFixed()).toBe("580");
     expect(summary.proceeds.toFixed()).toBe("360");
     expect(summary.basis.toFixed()).toBe("0");
-    expect(summary.remainingShares.toFixed()).toBe("11");
+    expect(summary.selectedShares.toFixed()).toBe("9");
     expect(summary.gain.toFixed()).toBe("360");
-    expect(summary.meetsTarget).toBe(true);
-    expect(summarize(lots, parameters(), new Set()).meetsTarget).toBe(false);
+    expect(summary.minimum.toFixed()).toBe("290");
+    expect(summary.ending.toFixed(2)).toBe("37.93");
   });
   it("breaks basis ties by date, overshoots whole groups, and handles empty holdings", (): void => {
     const lots = [lot("AAA", "2026-02-01"), lot(), lot("AAA", "2026-01-01", "10", "10", "2")];

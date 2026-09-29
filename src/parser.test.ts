@@ -3,6 +3,12 @@ import { describe, expect, it } from "vite-plus/test";
 
 import { parseRsuLotList } from "./parser.ts";
 
+function row(values: Record<number, unknown>): unknown[] {
+  const cells: unknown[] = Array(63).fill(null);
+  for (const [index, value] of Object.entries(values)) cells[Number(index)] = value;
+  return cells;
+}
+
 function workbook(): { sheet: string; data: unknown[][] }[] {
   const headers: unknown[] = Array(63).fill(null);
   for (const [index, name] of [
@@ -17,11 +23,6 @@ function workbook(): { sheet: string; data: unknown[][] }[] {
     [61, "Release Date"],
   ] as const)
     headers[index] = name;
-  const row = (values: Record<number, unknown>): unknown[] => {
-    const cells: unknown[] = Array(63).fill(null);
-    for (const [index, value] of Object.entries(values)) cells[Number(index)] = value;
-    return cells;
-  };
   return [
     {
       sheet: "Restricted Stock",
@@ -66,21 +67,82 @@ describe("RSU parser", () => {
       estimatedCostBasisPerShare: new BigNumber("12.34567890123456789"),
     });
   });
-  it.each([
-    ["0", "10.125", "10.125"],
-    ["5.25", "10.125", "5.25"],
-    ["0", "0", "0"],
-    ["0", null, "0"],
-    ["0", "", "0"],
-  ])("resolves held quantity from sellable %s and blocked %s", (sellable, blocked, held) => {
-    const input = changed(3, 30, blocked);
-    const cells = input[0]?.data[3];
-    if (cells === undefined) throw new Error("Missing fixture row");
-    cells[32] = sellable;
-    const lot = parseRsuLotList(input)[0];
-    if (lot === undefined) throw new Error("Missing parsed lot");
-    expect(lot.quantity.toString()).toBe(held);
+  it("joins grants and vest periods independently of record order", () => {
+    const input = workbook();
+    const sheet = input[0];
+    if (sheet === undefined) throw new Error("Missing fixture sheet");
+    sheet.data.splice(
+      1,
+      sheet.data.length,
+      row({ 0: "Sellable Shares", 11: "G2", 18: "2", 32: "3", 35: "40" }),
+      row({ 0: "Vest Schedule", 11: "G1", 18: 2, 19: "2026-02-01" }),
+      row({ 0: "Grant", 1: "AAA", 11: "G1" }),
+      row({ 0: "Vest Schedule", 11: "G2", 18: 1, 19: "2026-03-01" }),
+      row({ 0: "Sellable Shares", 11: "G1", 18: "1", 32: "2", 35: "10" }),
+      row({ 0: "Grant", 1: "BBB", 11: "G2" }),
+      row({ 0: "Vest Schedule", 11: "G2", 18: 2, 19: "2026-04-01" }),
+      row({ 0: "Sellable Shares", 11: "G1", 18: "2", 32: "4", 35: "20" }),
+      row({ 0: "Vest Schedule", 11: "G1", 18: 1, 19: "2026-01-01" }),
+      row({ 0: "Sellable Shares", 11: "G2", 18: "1", 32: "5", 35: "30" }),
+    );
+    expect(parseRsuLotList(input)).toEqual([
+      {
+        grantNumber: "G2",
+        vestPeriod: "2",
+        symbol: "BBB",
+        vestDate: "2026-04-01",
+        blocked: false,
+        quantity: new BigNumber(3),
+        estimatedCostBasisPerShare: new BigNumber(40),
+      },
+      {
+        grantNumber: "G1",
+        vestPeriod: "1",
+        symbol: "AAA",
+        vestDate: "2026-01-01",
+        blocked: false,
+        quantity: new BigNumber(2),
+        estimatedCostBasisPerShare: new BigNumber(10),
+      },
+      {
+        grantNumber: "G1",
+        vestPeriod: "2",
+        symbol: "AAA",
+        vestDate: "2026-02-01",
+        blocked: false,
+        quantity: new BigNumber(4),
+        estimatedCostBasisPerShare: new BigNumber(20),
+      },
+      {
+        grantNumber: "G2",
+        vestPeriod: "1",
+        symbol: "BBB",
+        vestDate: "2026-03-01",
+        blocked: false,
+        quantity: new BigNumber(5),
+        estimatedCostBasisPerShare: new BigNumber(30),
+      },
+    ]);
   });
+  it.each([
+    ["0", "10.125", "10.125", true],
+    ["5.25", "10.125", "5.25", false],
+    ["0", "0", "0", true],
+    ["0", null, "0", true],
+    ["0", "", "0", true],
+  ])(
+    "resolves held quantity from sellable %s and blocked %s",
+    (sellable, blocked, held, isBlocked) => {
+      const input = changed(3, 30, blocked);
+      const cells = input[0]?.data[3];
+      if (cells === undefined) throw new Error("Missing fixture row");
+      cells[32] = sellable;
+      const lot = parseRsuLotList(input)[0];
+      if (lot === undefined) throw new Error("Missing parsed lot");
+      expect(lot.quantity.toString()).toBe(held);
+      expect(lot.blocked).toBe(isBlocked);
+    },
+  );
   it.each([-1, "junk", "Infinity"])("rejects invalid blocked quantity %s", (value) => {
     expect(() => parseRsuLotList(changed(3, 30, value))).toThrow();
   });
