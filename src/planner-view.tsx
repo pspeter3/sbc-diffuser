@@ -13,7 +13,7 @@ export function Planner({ lots }: { lots: RsuLotList }): JSX.Element {
   const [selected, setSelected] = useState<ReadonlySet<number>>(new Set());
   const [section, setSection] = useState<HTMLElement | null>(null);
   return (
-    <section aria-labelledby="planner-heading" ref={setSection}>
+    <section ref={setSection}>
       <details open>
         <summary>Configuration</summary>
         <PlannerFormView
