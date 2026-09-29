@@ -8,3 +8,23 @@
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+
+.summary-table caption {
+  text-align: left;
+}
+
+.summary-table caption small {
+  display: block;
+}
+
+.summary-caption-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.5rem 1rem;
+  margin: 0.5rem 0 0;
+}
+
+.summary-caption-details dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}

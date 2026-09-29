@@ -2,6 +2,7 @@ import { type BigNumber } from "bignumber.js";
 import { type JSX } from "preact";
 import { useMemo } from "preact/hooks";
 
+import { formatUsd } from "./format.ts";
 import { type RsuLot, type RsuLotList } from "./schema.ts";
 
 const numericColumns: ReadonlySet<string> = new Set([
@@ -11,13 +12,6 @@ const numericColumns: ReadonlySet<string> = new Set([
   "Proceeds",
   "Result",
 ]);
-const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
-
-function formatUsd(value: Readonly<BigNumber>): string {
-  // Intl accepts decimal strings exactly; TypeScript requires a numeric-string type.
-  return String(Reflect.apply((decimal: number) => usd.format(decimal), null, [value.toFixed(2)]));
-}
-
 export function LotTableView({
   lots,
   prices,

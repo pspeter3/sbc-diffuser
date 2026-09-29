@@ -8,6 +8,18 @@ export interface Parameters {
   target: BigNumber;
 }
 
+export interface SymbolSummary {
+  shares: BigNumber;
+  value: BigNumber;
+  selectedLots: number;
+  selectedShares: BigNumber;
+  proceeds: BigNumber;
+  basis: BigNumber;
+  gain: BigNumber;
+  remainingShares: BigNumber;
+  remainingValue: BigNumber;
+}
+
 export function decimalInput(value: string, maximum?: number): BigNumber | null {
   if (!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(value)) return null;
   const number = new BigNumber(value);
@@ -25,6 +37,7 @@ export function summarize(
   parameters: Parameters,
   selected: ReadonlySet<number>,
 ): {
+  bySymbol: ReadonlyMap<string, SymbolSummary>;
   shares: BigNumber;
   value: BigNumber;
   total: BigNumber;
@@ -39,6 +52,13 @@ export function summarize(
   ending: BigNumber;
   meetsTarget: boolean;
 } {
+  const positions = new Map<
+    string,
+    Pick<
+      SymbolSummary,
+      "shares" | "value" | "selectedLots" | "selectedShares" | "proceeds" | "basis"
+    >
+  >();
   let shares = new BigNumber(0);
   let value = new BigNumber(0);
   let selectedShares = new BigNumber(0);
@@ -46,18 +66,43 @@ export function summarize(
   let basis = new BigNumber(0);
   lots.forEach((lot, index): void => {
     const lotValue = lot.quantity.times(priceFor(parameters, lot.symbol));
+    const position = positions.get(lot.symbol) ?? {
+      shares: new BigNumber(0),
+      value: new BigNumber(0),
+      selectedLots: 0,
+      selectedShares: new BigNumber(0),
+      proceeds: new BigNumber(0),
+      basis: new BigNumber(0),
+    };
+    position.shares = position.shares.plus(lot.quantity);
+    position.value = position.value.plus(lotValue);
     shares = shares.plus(lot.quantity);
     value = value.plus(lotValue);
     if (selected.has(index)) {
+      position.selectedLots += 1;
+      position.selectedShares = position.selectedShares.plus(lot.quantity);
+      position.proceeds = position.proceeds.plus(lotValue);
+      position.basis = position.basis.plus(lot.quantity.times(lot.estimatedCostBasisPerShare));
       selectedShares = selectedShares.plus(lot.quantity);
       proceeds = proceeds.plus(lotValue);
       basis = basis.plus(lot.quantity.times(lot.estimatedCostBasisPerShare));
     }
+    positions.set(lot.symbol, position);
   });
+  const bySymbol = new Map<string, SymbolSummary>();
+  for (const [symbol, position] of positions) {
+    bySymbol.set(symbol, {
+      ...position,
+      gain: position.proceeds.minus(position.basis),
+      remainingShares: position.shares.minus(position.selectedShares),
+      remainingValue: position.value.minus(position.proceeds),
+    });
+  }
   const total = value.plus(parameters.wealth);
   const minimum = BigNumber.maximum(0, value.minus(total.times(parameters.target).div(100)));
   const remainingValue = value.minus(proceeds);
   return {
+    bySymbol,
     shares,
     value,
     total,

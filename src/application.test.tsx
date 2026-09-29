@@ -41,14 +41,14 @@ it("imports, configures, selects manually, and replaces selections on submission
   expect(details.map((section) => section.open)).toEqual([true, false, true]);
   expect(within(summary).getByText("Selection does not meet the target")).toBeTruthy();
   fireEvent.input(price, { target: { value: "80" } });
-  expect(
-    within(summary).getByText("Current stock value (USD)").nextElementSibling?.textContent,
-  ).toBe("400.00");
+  expect(within(summary).getByRole("row", { name: /^Total / }).children[2]?.textContent).toBe(
+    "$400.00",
+  );
   fireEvent.click(checkbox);
   expect(checkbox.checked).toBe(true);
   expect(price).toHaveProperty("value", "80");
-  expect(within(summary).getByText("Selected proceeds (USD)").nextElementSibling?.textContent).toBe(
-    "400.00",
+  expect(within(summary).getByRole("row", { name: /^Total / }).children[5]?.textContent).toBe(
+    "$400.00",
   );
   fireEvent.click(checkbox);
   fireEvent.input(price, { target: { value: "0" } });
