@@ -36,7 +36,7 @@ it("imports, configures, selects manually, and replaces selections on submission
   fireEvent.click(update);
   expect(details.map((section) => section.open)).toEqual([false, true, true, true]);
   expect(checkbox.checked).toBe(true);
-  expect(within(summary).getByText("Selection meets the target")).toBeTruthy();
+  expect(within(summary).queryByText("Target")).toBeNull();
   summary.open = false;
   if (details[0] === undefined) throw new Error("Missing configuration details");
   details[0].open = true;
@@ -45,7 +45,7 @@ it("imports, configures, selects manually, and replaces selections on submission
   expect(checkbox.checked).toBe(false);
   expect(document.activeElement).toBe(checkbox);
   expect(details.map((section) => section.open)).toEqual([true, true, false, true]);
-  expect(within(summary).getByText("Selection does not meet the target")).toBeTruthy();
+  expect(within(summary).queryByText("Target")).toBeNull();
   fireEvent.input(price, { target: { value: "80" } });
   expect(within(summary).getByRole("row", { name: /^Total / }).children[3]?.textContent).toBe(
     "$0.00",
@@ -109,5 +109,5 @@ it.each(["empty", "zero-quantity"])("supports a %s workbook", async (kind): Prom
   fireEvent.input(wealth, { target: { value: "0" } });
   fireEvent.input(screen.getByLabelText("Concentration"), { target: { value: "0" } });
   fireEvent.click(screen.getByRole("button", { name: "Recommend" }));
-  expect(screen.getByText("Selection meets the target")).toBeTruthy();
+  expect(screen.queryByText("Target")).toBeNull();
 });

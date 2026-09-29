@@ -39,10 +39,6 @@ export function SummaryView({
     : [
         ["Minimum Sale", formatUsd(summary.minimum)],
         ["Final Concentration", `${summary.ending.toFixed(2)}%`],
-        [
-          "Target",
-          summary.meetsTarget ? "Selection meets the target" : "Selection does not meet the target",
-        ],
       ];
   const lotCount = symbols.reduce(
     (count, [, position]) => count + (portfolio ? position.lots : position.selectedLots),
@@ -50,10 +46,9 @@ export function SummaryView({
   );
   return (
     <section class="overflow-auto" aria-label={`${kind} summary`}>
-      <table class="summary-table">
+      <table class="summary summary-table">
         <caption>
-          <strong>{kind}</strong>
-          <dl class="summary-caption-details">
+          <dl class="grid">
             {details.map(([label, value]) => (
               <div key={label}>
                 <dt>{label}</dt>

@@ -130,11 +130,11 @@ it("renders the actual selection and clears stale summaries", (): void => {
   const { rerender, container } = render(
     <SummaryView kind="Sale" lots={[lot()]} parameters={parameters()} selected={new Set()} />,
   );
-  expect(screen.getByText("Selection does not meet the target")).toBeTruthy();
+  expect(screen.queryByText("Target")).toBeNull();
   rerender(
     <SummaryView kind="Sale" lots={[lot()]} parameters={parameters()} selected={new Set([0])} />,
   );
-  expect(screen.getByText("Selection meets the target")).toBeTruthy();
+  expect(screen.queryByText("Target")).toBeNull();
   rerender(<SummaryView kind="Sale" lots={[lot()]} parameters={null} selected={new Set()} />);
   expect(container.textContent).toBe("");
 });
