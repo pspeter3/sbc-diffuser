@@ -11,9 +11,9 @@ export function Planner({ lots }: { lots: RsuLotList }): JSX.Element {
   const symbols = useMemo(() => [...new Set(lots.map((lot) => lot.symbol))].sort(), [lots]);
   const [parameters, setParameters] = useState<Parameters | null>(null);
   const [selected, setSelected] = useState<ReadonlySet<number>>(new Set());
+  const [section, setSection] = useState<HTMLElement | null>(null);
   return (
-    <section aria-labelledby="planner-heading">
-      <h2 id="planner-heading">Lot viewer</h2>
+    <section aria-labelledby="planner-heading" ref={setSection}>
       <details open>
         <summary>Configuration</summary>
         <PlannerFormView
@@ -21,14 +21,19 @@ export function Planner({ lots }: { lots: RsuLotList }): JSX.Element {
           onSubmit={(next) => {
             setParameters(next);
             setSelected(recommend(lots, next));
+            // The form can only submit after the section ref has been attached.
+            /* v8 ignore next */
+            section?.querySelectorAll(":scope > details").forEach((details, index) => {
+              details.toggleAttribute("open", index !== 0);
+            });
           }}
         />
       </details>
-      <details open>
+      <details>
         <summary>Summary</summary>
         <SummaryView lots={lots} parameters={parameters} selected={selected} />
       </details>
-      <details open>
+      <details>
         <summary>Lots</summary>
         <LotTableView
           lots={lots}
