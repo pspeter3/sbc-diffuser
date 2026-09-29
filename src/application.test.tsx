@@ -17,18 +17,24 @@ it("imports, configures, selects manually, and replaces selections on submission
   const price = await screen.findByLabelText(/^TEST/);
   expect(screen.queryByLabelText("Workbook (.xlsx)")).toBeNull();
   const details = [...document.querySelectorAll("details")];
-  expect(details.map((section) => section.open)).toEqual([true, false, false]);
+  expect(details.map((section) => section.open)).toEqual([true, false, false, false]);
+  expect(details.map((section) => section.querySelector("summary")?.textContent)).toEqual([
+    "Configuration",
+    "Portfolio",
+    "Sale",
+    "Lots",
+  ]);
   const checkbox = screen.getByRole<HTMLInputElement>("checkbox");
   expect(checkbox.disabled).toBe(true);
-  const summary = screen.getByText("Summary").closest("details");
+  const summary = screen.getByText("Sale").closest("details");
   if (summary === null) throw new Error("Missing summary details");
-  expect(summary.textContent).toBe("Summary");
+  expect(summary.textContent).toBe("Sale");
   fireEvent.input(price, { target: { value: "40" } });
   fireEvent.input(screen.getByLabelText("Wealth"), { target: { value: "0" } });
   fireEvent.input(screen.getByLabelText("Concentration"), { target: { value: "50" } });
   const update = screen.getByRole("button", { name: "Recommend" });
   fireEvent.click(update);
-  expect(details.map((section) => section.open)).toEqual([false, true, true]);
+  expect(details.map((section) => section.open)).toEqual([false, true, true, true]);
   expect(checkbox.checked).toBe(true);
   expect(within(summary).getByText("Selection meets the target")).toBeTruthy();
   summary.open = false;
@@ -38,16 +44,16 @@ it("imports, configures, selects manually, and replaces selections on submission
   fireEvent.click(checkbox);
   expect(checkbox.checked).toBe(false);
   expect(document.activeElement).toBe(checkbox);
-  expect(details.map((section) => section.open)).toEqual([true, false, true]);
+  expect(details.map((section) => section.open)).toEqual([true, true, false, true]);
   expect(within(summary).getByText("Selection does not meet the target")).toBeTruthy();
   fireEvent.input(price, { target: { value: "80" } });
-  expect(within(summary).getByRole("row", { name: /^Total / }).children[2]?.textContent).toBe(
-    "$400.00",
+  expect(within(summary).getByRole("row", { name: /^Total / }).children[3]?.textContent).toBe(
+    "$0.00",
   );
   fireEvent.click(checkbox);
   expect(checkbox.checked).toBe(true);
   expect(price).toHaveProperty("value", "80");
-  expect(within(summary).getByRole("row", { name: /^Total / }).children[5]?.textContent).toBe(
+  expect(within(summary).getByRole("row", { name: /^Total / }).children[3]?.textContent).toBe(
     "$400.00",
   );
   fireEvent.click(checkbox);
@@ -58,7 +64,7 @@ it("imports, configures, selects manually, and replaces selections on submission
   expect(checkbox.checked).toBe(false);
   fireEvent.input(price, { target: { value: "40" } });
   fireEvent.click(update);
-  expect(details.map((section) => section.open)).toEqual([false, true, true]);
+  expect(details.map((section) => section.open)).toEqual([false, true, true, true]);
   expect(checkbox.checked).toBe(true);
 });
 

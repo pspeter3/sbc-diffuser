@@ -128,16 +128,18 @@ it("aligns dates and numeric cells and formats USD without losing precision", ()
 
 it("renders the actual selection and clears stale summaries", (): void => {
   const { rerender, container } = render(
-    <SummaryView lots={[lot()]} parameters={parameters()} selected={new Set()} />,
+    <SummaryView kind="Sale" lots={[lot()]} parameters={parameters()} selected={new Set()} />,
   );
   expect(screen.getByText("Selection does not meet the target")).toBeTruthy();
-  rerender(<SummaryView lots={[lot()]} parameters={parameters()} selected={new Set([0])} />);
+  rerender(
+    <SummaryView kind="Sale" lots={[lot()]} parameters={parameters()} selected={new Set([0])} />,
+  );
   expect(screen.getByText("Selection meets the target")).toBeTruthy();
-  rerender(<SummaryView lots={[lot()]} parameters={null} selected={new Set()} />);
+  rerender(<SummaryView kind="Sale" lots={[lot()]} parameters={null} selected={new Set()} />);
   expect(container.textContent).toBe("");
 });
 
-it("shows sorted symbol rows, exact totals, and portfolio details in the caption", (): void => {
+it("separates held holdings from selected sales with exact totals and captions", (): void => {
   const lots = [
     lot("BBB", "2026-01-01", "10", "5"),
     lot("AAA", "2026-01-02", "10", "10"),
@@ -145,117 +147,64 @@ it("shows sorted symbol rows, exact totals, and portfolio details in the caption
   ];
   const configured = parameters("50", "100");
   const { rerender } = render(
-    <SummaryView lots={lots} parameters={configured} selected={new Set([0, 2])} />,
+    <SummaryView kind="Portfolio" lots={lots} parameters={configured} selected={new Set([0, 2])} />,
   );
-  const table = screen.getByRole("table", { name: /Portfolio/ });
-  const rows = within(table).getAllByRole("row");
-  expect(rows[0]?.textContent).toBe("SymbolHeldValueLotsSellProceedsBasisGainLeftBalance");
-  expect([...(rows[1]?.children ?? [])].map((cell) => cell.textContent)).toEqual([
-    "AAA",
-    "12",
-    "$240.00",
-    "1",
-    "2",
-    "$40.00",
-    "$10.00",
-    "$30.00",
-    "10",
-    "$200.00",
+  const cells = (): (string | null)[][] =>
+    screen.getAllByRole("row").map((row) => [...row.children].map((cell) => cell.textContent));
+  expect(cells()).toEqual([
+    ["Symbol", "Lots", "Shares", "Value"],
+    ["AAA", "2", "12", "$240.00"],
+    ["BBB", "1", "5", "$200.00"],
+    ["Total", "3", "17", "$440.00"],
   ]);
-  expect([...(rows[2]?.children ?? [])].map((cell) => cell.textContent)).toEqual([
-    "BBB",
-    "5",
-    "$200.00",
-    "1",
-    "5",
-    "$200.00",
-    "$50.00",
-    "$150.00",
-    "0",
-    "$0.00",
+  expect(screen.getByText("Total Wealth").nextElementSibling?.textContent).toBe("$540.00");
+  expect(screen.getByText("Current Concentration").nextElementSibling?.textContent).toBe("81.48%");
+  rerender(
+    <SummaryView kind="Sale" lots={lots} parameters={configured} selected={new Set([0, 2])} />,
+  );
+  expect(cells()).toEqual([
+    ["Symbol", "Lots", "Shares", "Proceeds", "Basis", "Gain"],
+    ["AAA", "1", "2", "$40.00", "$10.00", "$30.00"],
+    ["BBB", "1", "5", "$200.00", "$50.00", "$150.00"],
+    ["Total", "2", "7", "$240.00", "$60.00", "$180.00"],
   ]);
-  expect([...(rows[3]?.children ?? [])].map((cell) => cell.textContent)).toEqual([
-    "Total",
-    "17",
-    "$440.00",
-    "2",
-    "7",
-    "$240.00",
-    "$60.00",
-    "$180.00",
-    "10",
-    "$200.00",
-  ]);
-  expect(rows[3]?.closest("tfoot")).not.toBeNull();
-  for (const row of rows) {
-    expect(row.children[0]?.classList.contains("numeric-cell")).toBe(false);
-    for (const cell of [...row.children].slice(1)) {
-      expect(cell.classList.contains("numeric-cell")).toBe(true);
-    }
-  }
-  const caption = table.querySelector("caption");
-  if (caption === null) throw new Error("Missing summary caption");
-  expect(caption.textContent).toContain("Held, Sell, and Left are shares");
-  expect(within(caption).getByText("Non-workbook wealth").nextElementSibling?.textContent).toBe(
-    "$100.00",
-  );
-  expect(within(caption).getByText("Total modeled wealth").nextElementSibling?.textContent).toBe(
-    "$540.00",
-  );
-  expect(within(caption).getByText("Current concentration").nextElementSibling?.textContent).toBe(
-    "81.48%",
-  );
-  expect(within(caption).getByText("Desired concentration").nextElementSibling?.textContent).toBe(
-    "50.00%",
-  );
-  expect(within(caption).getByText("Minimum required sale").nextElementSibling?.textContent).toBe(
-    "$170.00",
-  );
-  expect(within(caption).getByText("Ending concentration").nextElementSibling?.textContent).toBe(
+  const table = screen.getByRole("table", { name: /Sale/ });
+  expect(within(table).getByText("Minimum Sale").nextElementSibling?.textContent).toBe("$170.00");
+  expect(within(table).getByText("Final Concentration").nextElementSibling?.textContent).toBe(
     "37.04%",
   );
-  expect(within(caption).getByText("Selection meets the target")).toBeTruthy();
-
-  rerender(<SummaryView lots={lots} parameters={configured} selected={new Set()} />);
-  expect(within(table).getByRole("row", { name: /^Total / }).children[3]?.textContent).toBe("0");
-  expect(within(table).getByRole("row", { name: /^Total / }).children[5]?.textContent).toBe(
-    "$0.00",
-  );
-  expect(within(caption).getByText("Selection does not meet the target")).toBeTruthy();
-});
-
-it("shows an empty summary table with a zero footer", (): void => {
-  render(<SummaryView lots={[]} parameters={parameters("0")} selected={new Set()} />);
-  const rows = screen.getAllByRole("row");
-  expect(rows).toHaveLength(2);
-  expect(rows[1]?.closest("tfoot")).not.toBeNull();
-  expect([...(rows[1]?.children ?? [])].map((cell) => cell.textContent)).toEqual([
-    "Total",
-    "0",
-    "$0.00",
-    "0",
-    "0",
-    "$0.00",
-    "$0.00",
-    "$0.00",
-    "0",
-    "$0.00",
+  for (const row of screen.getAllByRole("row")) {
+    for (const cell of [...row.children].slice(1))
+      expect(cell.classList.contains("numeric-cell")).toBe(true);
+  }
+  expect(screen.getByRole("row", { name: /^Total / }).closest("tfoot")).not.toBeNull();
+  rerender(<SummaryView kind="Sale" lots={lots} parameters={configured} selected={new Set([2])} />);
+  expect(screen.queryByRole("row", { name: /^BBB / })).toBeNull();
+  rerender(<SummaryView kind="Sale" lots={lots} parameters={configured} selected={new Set()} />);
+  expect(cells()).toEqual([
+    ["Symbol", "Lots", "Shares", "Proceeds", "Basis", "Gain"],
+    ["Total", "0", "0", "$0.00", "$0.00", "$0.00"],
   ]);
-  expect(screen.getByText("Selection meets the target")).toBeTruthy();
+  rerender(<SummaryView kind="Portfolio" lots={[]} parameters={configured} selected={new Set()} />);
+  expect(cells()).toEqual([
+    ["Symbol", "Lots", "Shares", "Value"],
+    ["Total", "0", "0", "$0.00"],
+  ]);
 });
 
 it("colors gains and losses while leaving zero neutral", (): void => {
   render(
     <SummaryView
+      kind="Sale"
       lots={[lot("AAA", "2026-01-01", "10", "1"), lot("BBB", "2026-01-01", "50", "1")]}
       parameters={parameters()}
       selected={new Set([0, 1])}
     />,
   );
   const rows = screen.getAllByRole("row");
-  expect(rows[1]?.children[7]?.classList.contains("gain-positive")).toBe(true);
-  expect(rows[2]?.children[7]?.classList.contains("gain-negative")).toBe(true);
-  expect(rows[3]?.children[7]?.textContent).toBe("$0.00");
-  expect(rows[3]?.children[7]?.classList.contains("gain-positive")).toBe(false);
-  expect(rows[3]?.children[7]?.classList.contains("gain-negative")).toBe(false);
+  expect(rows[1]?.children[5]?.classList.contains("gain-positive")).toBe(true);
+  expect(rows[2]?.children[5]?.classList.contains("gain-negative")).toBe(true);
+  expect(rows[3]?.children[5]?.textContent).toBe("$0.00");
+  expect(rows[3]?.children[5]?.classList.contains("gain-positive")).toBe(false);
+  expect(rows[3]?.children[5]?.classList.contains("gain-negative")).toBe(false);
 });

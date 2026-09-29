@@ -9,6 +9,7 @@ export interface Parameters {
 }
 
 export interface SymbolSummary {
+  lots: number;
   shares: BigNumber;
   value: BigNumber;
   selectedLots: number;
@@ -56,7 +57,7 @@ export function summarize(
     string,
     Pick<
       SymbolSummary,
-      "shares" | "value" | "selectedLots" | "selectedShares" | "proceeds" | "basis"
+      "lots" | "shares" | "value" | "selectedLots" | "selectedShares" | "proceeds" | "basis"
     >
   >();
   let shares = new BigNumber(0);
@@ -67,6 +68,7 @@ export function summarize(
   lots.forEach((lot, index): void => {
     const lotValue = lot.quantity.times(priceFor(parameters, lot.symbol));
     const position = positions.get(lot.symbol) ?? {
+      lots: 0,
       shares: new BigNumber(0),
       value: new BigNumber(0),
       selectedLots: 0,
@@ -74,6 +76,7 @@ export function summarize(
       proceeds: new BigNumber(0),
       basis: new BigNumber(0),
     };
+    position.lots += 1;
     position.shares = position.shares.plus(lot.quantity);
     position.value = position.value.plus(lotValue);
     shares = shares.plus(lot.quantity);

@@ -30,8 +30,12 @@ export function Planner({ lots }: { lots: RsuLotList }): JSX.Element {
         />
       </details>
       <details>
-        <summary>Summary</summary>
-        <SummaryView lots={lots} parameters={parameters} selected={selected} />
+        <summary>Portfolio</summary>
+        <SummaryView kind="Portfolio" lots={lots} parameters={parameters} selected={selected} />
+      </details>
+      <details>
+        <summary>Sale</summary>
+        <SummaryView kind="Sale" lots={lots} parameters={parameters} selected={selected} />
       </details>
       <details>
         <summary>Lots</summary>
