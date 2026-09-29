@@ -1,3 +1,4 @@
+@use "@picocss/pico/scss/colors" as colors;
 @use "@picocss/pico/scss/pico" with (
   $theme-color: "indigo",
   $semantic-root-element: "#app",
@@ -7,6 +8,14 @@
 .numeric-cell {
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+.gain-positive {
+  color: light-dark(colors.$green-550, colors.$green-250);
+}
+
+.gain-negative {
+  color: light-dark(colors.$red-550, colors.$red-300);
 }
 
 .summary-table caption {

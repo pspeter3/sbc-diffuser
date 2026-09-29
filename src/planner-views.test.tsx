@@ -243,3 +243,19 @@ it("shows an empty summary table with a zero footer", (): void => {
   ]);
   expect(screen.getByText("Selection meets the target")).toBeTruthy();
 });
+
+it("colors gains and losses while leaving zero neutral", (): void => {
+  render(
+    <SummaryView
+      lots={[lot("AAA", "2026-01-01", "10", "1"), lot("BBB", "2026-01-01", "50", "1")]}
+      parameters={parameters()}
+      selected={new Set([0, 1])}
+    />,
+  );
+  const rows = screen.getAllByRole("row");
+  expect(rows[1]?.children[7]?.classList.contains("gain-positive")).toBe(true);
+  expect(rows[2]?.children[7]?.classList.contains("gain-negative")).toBe(true);
+  expect(rows[3]?.children[7]?.textContent).toBe("$0.00");
+  expect(rows[3]?.children[7]?.classList.contains("gain-positive")).toBe(false);
+  expect(rows[3]?.children[7]?.classList.contains("gain-negative")).toBe(false);
+});

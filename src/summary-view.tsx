@@ -1,3 +1,4 @@
+import { type BigNumber } from "bignumber.js";
 import { type JSX } from "preact";
 
 import { formatUsd } from "./format.ts";
@@ -16,6 +17,12 @@ const headings = [
   "Left",
   "Balance",
 ];
+
+function gainCellClass(gain: Readonly<BigNumber>): string {
+  if (gain.gt(0)) return "numeric-cell gain-positive";
+  if (gain.lt(0)) return "numeric-cell gain-negative";
+  return "numeric-cell";
+}
 
 export function SummaryView({
   lots,
@@ -78,7 +85,7 @@ export function SummaryView({
               <td class="numeric-cell">{position.selectedShares.toFixed()}</td>
               <td class="numeric-cell">{formatUsd(position.proceeds)}</td>
               <td class="numeric-cell">{formatUsd(position.basis)}</td>
-              <td class="numeric-cell">{formatUsd(position.gain)}</td>
+              <td class={gainCellClass(position.gain)}>{formatUsd(position.gain)}</td>
               <td class="numeric-cell">{position.remainingShares.toFixed()}</td>
               <td class="numeric-cell">{formatUsd(position.remainingValue)}</td>
             </tr>
@@ -93,7 +100,7 @@ export function SummaryView({
             <td class="numeric-cell">{summary.selectedShares.toFixed()}</td>
             <td class="numeric-cell">{formatUsd(summary.proceeds)}</td>
             <td class="numeric-cell">{formatUsd(summary.basis)}</td>
-            <td class="numeric-cell">{formatUsd(summary.gain)}</td>
+            <td class={gainCellClass(summary.gain)}>{formatUsd(summary.gain)}</td>
             <td class="numeric-cell">{summary.remainingShares.toFixed()}</td>
             <td class="numeric-cell">{formatUsd(summary.remainingValue)}</td>
           </tr>
