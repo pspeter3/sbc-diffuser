@@ -22,18 +22,11 @@
   text-align: left;
 }
 
-.summary-table caption small {
-  display: block;
-}
-
-.summary-caption-details {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-  gap: 0.5rem 1rem;
-  margin: 0.5rem 0 0;
-}
-
-.summary-caption-details dd {
+.summary-table caption dd {
   margin: 0;
   font-variant-numeric: tabular-nums;
+}
+
+.summary caption dt {
+  font-weight: bold;
 }

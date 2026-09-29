@@ -5,19 +5,6 @@ import { formatUsd } from "./format.ts";
 import { type Parameters, summarize } from "./planner.ts";
 import { type RsuLotList } from "./schema.ts";
 
-const headings = [
-  "Symbol",
-  "Held",
-  "Value",
-  "Lots",
-  "Sell",
-  "Proceeds",
-  "Basis",
-  "Gain",
-  "Left",
-  "Balance",
-];
-
 function gainCellClass(gain: Readonly<BigNumber>): string {
   if (gain.gt(0)) return "numeric-cell gain-positive";
   if (gain.lt(0)) return "numeric-cell gain-negative";
@@ -25,39 +12,43 @@ function gainCellClass(gain: Readonly<BigNumber>): string {
 }
 
 export function SummaryView({
+  kind,
   lots,
   parameters,
   selected,
 }: {
+  kind: "Portfolio" | "Sale";
   lots: RsuLotList;
   parameters: Parameters | null;
   selected: ReadonlySet<number>;
 }): JSX.Element | null {
   if (parameters === null) return null;
   const summary = summarize(lots, parameters, selected);
-  const symbols = [...summary.bySymbol].sort(([a], [b]) => a.localeCompare(b));
-  const details = [
-    ["Non-workbook wealth", formatUsd(parameters.wealth)],
-    ["Total modeled wealth", formatUsd(summary.total)],
-    ["Current concentration", `${summary.current.toFixed(2)}%`],
-    ["Desired concentration", `${parameters.target.toFixed(2)}%`],
-    ["Minimum required sale", formatUsd(summary.minimum)],
-    ["Ending concentration", `${summary.ending.toFixed(2)}%`],
-    [
-      "Target",
-      summary.meetsTarget ? "Selection meets the target" : "Selection does not meet the target",
-    ],
-  ];
-  const selectedLots = symbols.reduce((count, [, position]) => count + position.selectedLots, 0);
+  const portfolio = kind === "Portfolio";
+  const symbols = [...summary.bySymbol]
+    .filter(([, position]) => portfolio || position.selectedLots > 0)
+    .sort(([a], [b]) => a.localeCompare(b));
+  const headings = portfolio
+    ? ["Symbol", "Lots", "Shares", "Value"]
+    : ["Symbol", "Lots", "Shares", "Proceeds", "Basis", "Gain"];
+  const details = portfolio
+    ? [
+        ["Total Wealth", formatUsd(summary.total)],
+        ["Current Concentration", `${summary.current.toFixed(2)}%`],
+      ]
+    : [
+        ["Minimum Sale", formatUsd(summary.minimum)],
+        ["Final Concentration", `${summary.ending.toFixed(2)}%`],
+      ];
+  const lotCount = symbols.reduce(
+    (count, [, position]) => count + (portfolio ? position.lots : position.selectedLots),
+    0,
+  );
   return (
-    <section class="overflow-auto" aria-label="Stock summary">
-      <table class="summary-table">
+    <section class="overflow-auto" aria-label={`${kind} summary`}>
+      <table class="summary summary-table">
         <caption>
-          <strong>Portfolio</strong>
-          <small>
-            Held, Sell, and Left are shares. Value, Proceeds, Basis, Gain, and Balance are USD.
-          </small>
-          <dl class="summary-caption-details">
+          <dl class="grid">
             {details.map(([label, value]) => (
               <div key={label}>
                 <dt>{label}</dt>
@@ -79,30 +70,36 @@ export function SummaryView({
           {symbols.map(([symbol, position]) => (
             <tr key={symbol}>
               <th scope="row">{symbol}</th>
-              <td class="numeric-cell">{position.shares.toFixed()}</td>
-              <td class="numeric-cell">{formatUsd(position.value)}</td>
-              <td class="numeric-cell">{position.selectedLots}</td>
-              <td class="numeric-cell">{position.selectedShares.toFixed()}</td>
-              <td class="numeric-cell">{formatUsd(position.proceeds)}</td>
-              <td class="numeric-cell">{formatUsd(position.basis)}</td>
-              <td class={gainCellClass(position.gain)}>{formatUsd(position.gain)}</td>
-              <td class="numeric-cell">{position.remainingShares.toFixed()}</td>
-              <td class="numeric-cell">{formatUsd(position.remainingValue)}</td>
+              <td class="numeric-cell">{portfolio ? position.lots : position.selectedLots}</td>
+              <td class="numeric-cell">
+                {(portfolio ? position.shares : position.selectedShares).toFixed()}
+              </td>
+              <td class="numeric-cell">
+                {formatUsd(portfolio ? position.value : position.proceeds)}
+              </td>
+              {!portfolio && (
+                <>
+                  <td class="numeric-cell">{formatUsd(position.basis)}</td>
+                  <td class={gainCellClass(position.gain)}>{formatUsd(position.gain)}</td>
+                </>
+              )}
             </tr>
           ))}
         </tbody>
         <tfoot>
           <tr>
             <th scope="row">Total</th>
-            <td class="numeric-cell">{summary.shares.toFixed()}</td>
-            <td class="numeric-cell">{formatUsd(summary.value)}</td>
-            <td class="numeric-cell">{selectedLots}</td>
-            <td class="numeric-cell">{summary.selectedShares.toFixed()}</td>
-            <td class="numeric-cell">{formatUsd(summary.proceeds)}</td>
-            <td class="numeric-cell">{formatUsd(summary.basis)}</td>
-            <td class={gainCellClass(summary.gain)}>{formatUsd(summary.gain)}</td>
-            <td class="numeric-cell">{summary.remainingShares.toFixed()}</td>
-            <td class="numeric-cell">{formatUsd(summary.remainingValue)}</td>
+            <td class="numeric-cell">{lotCount}</td>
+            <td class="numeric-cell">
+              {(portfolio ? summary.shares : summary.selectedShares).toFixed()}
+            </td>
+            <td class="numeric-cell">{formatUsd(portfolio ? summary.value : summary.proceeds)}</td>
+            {!portfolio && (
+              <>
+                <td class="numeric-cell">{formatUsd(summary.basis)}</td>
+                <td class={gainCellClass(summary.gain)}>{formatUsd(summary.gain)}</td>
+              </>
+            )}
           </tr>
         </tfoot>
       </table>
