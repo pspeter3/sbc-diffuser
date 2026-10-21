@@ -16,37 +16,37 @@ it("imports, configures, selects manually, and replaces selections on submission
   fireEvent.submit(screen.getByRole("form"));
   const price = await screen.findByLabelText(/^TEST/);
   expect(screen.queryByLabelText("Workbook (.xlsx)")).toBeNull();
-  const details = [...document.querySelectorAll("details")];
-  expect(details.map((section) => section.open)).toEqual([true, false, false, false]);
-  expect(details.map((section) => section.querySelector("summary")?.textContent)).toEqual([
-    "Configuration",
-    "Portfolio",
-    "Sale",
-    "Lots",
-  ]);
+  const details = (): HTMLDetailsElement[] => [...document.querySelectorAll("details")];
+  const titles = (): (string | null | undefined)[] =>
+    details().map((section) => section.querySelector("summary")?.textContent);
+  expect(titles()).toEqual(["Configuration", "Lots"]);
+  expect(details().map((section) => section.open)).toEqual([true, false]);
   const checkbox = screen.getByRole<HTMLInputElement>("checkbox");
   expect(checkbox.disabled).toBe(true);
-  const summary = screen.getByText("Sale").closest("details");
-  if (summary === null) throw new Error("Missing summary details");
-  expect(summary.textContent).toBe("Sale");
   fireEvent.input(price, { target: { value: "40" } });
   fireEvent.input(screen.getByLabelText("Wealth"), { target: { value: "0" } });
   fireEvent.input(screen.getByLabelText("Concentration"), { target: { value: "50" } });
   const update = screen.getByRole("button", { name: "Recommend" });
   fireEvent.click(update);
-  expect(details.map((section) => section.open)).toEqual([false, true, true, true]);
+  expect(titles()).toEqual(["Configuration", "Portfolio", "Sale", "Lots"]);
+  expect(details().map((section) => section.open)).toEqual([false, true, true, true]);
   expect(checkbox.checked).toBe(true);
+  const summary = screen.getByText("Sale").closest("details");
+  if (summary === null) throw new Error("Missing summary details");
   expect(
     within(summary).getByRole("row", { name: "Total 1 10 $400.00 $250.00 $150.00" }),
   ).toBeTruthy();
   summary.open = false;
-  if (details[0] === undefined) throw new Error("Missing configuration details");
-  details[0].open = true;
+  const [configuration] = details();
+  if (configuration === undefined) throw new Error("Missing configuration details");
+  configuration.open = true;
+  // Toggle events are dispatched as tasks, as in browsers.
+  await new Promise((resolve) => setTimeout(resolve));
   checkbox.focus();
   fireEvent.click(checkbox);
   expect(checkbox.checked).toBe(false);
   expect(document.activeElement).toBe(checkbox);
-  expect(details.map((section) => section.open)).toEqual([true, true, false, true]);
+  expect(details().map((section) => section.open)).toEqual([true, true, false, true]);
   expect(within(summary).getByRole("row", { name: "Total 0 0 $0.00 $0.00 $0.00" })).toBeTruthy();
   fireEvent.input(price, { target: { value: "80" } });
   expect(within(summary).getByRole("row", { name: /^Total / }).children[3]?.textContent).toBe(
@@ -66,7 +66,7 @@ it("imports, configures, selects manually, and replaces selections on submission
   expect(checkbox.checked).toBe(false);
   fireEvent.input(price, { target: { value: "40" } });
   fireEvent.click(update);
-  expect(details.map((section) => section.open)).toEqual([false, true, true, true]);
+  expect(details().map((section) => section.open)).toEqual([false, true, true, true]);
   expect(checkbox.checked).toBe(true);
 });
 
