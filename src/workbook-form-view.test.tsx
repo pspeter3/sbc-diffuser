@@ -50,14 +50,15 @@ it("shows parser errors and recovers on retry", async (): Promise<void> => {
   const button = screen.getByRole<HTMLButtonElement>("button");
   fireEvent.submit(screen.getByRole("form"));
   await screen.findByText(/Missing Restricted Stock worksheet/);
-  for (const error of [new Error("Invalid archive"), new Error(""), "unknown"]) {
+  const fallback = "Could not read this workbook. Choose another .xlsx file.";
+  for (const [error, message] of [
+    [new Error("Invalid archive"), "Invalid archive"],
+    [new Error(""), fallback],
+    ["unknown", fallback],
+  ] as const) {
     vi.mocked(readXlsxFile).mockRejectedValueOnce(error);
     fireEvent.submit(screen.getByRole("form"));
-    await screen.findByText(
-      error instanceof Error && error.message.length > 0
-        ? error.message
-        : "Could not read this workbook. Choose another .xlsx file.",
-    );
+    await screen.findByText(message);
     await waitFor(() => expect(button.disabled).toBe(false));
   }
   vi.mocked(readXlsxFile).mockResolvedValue(workbook());
