@@ -19,25 +19,20 @@ export function SummaryView({
 }): JSX.Element | null {
   if (summary === null) return null;
   const portfolio = kind === "Portfolio";
-  const symbols = [...summary.bySymbol]
-    .filter(([, position]) => portfolio || position.selectedLots > 0)
-    .sort(([a], [b]) => a.localeCompare(b));
+  const { bySymbol, total } = portfolio ? summary.portfolio : summary.sale;
+  const symbols = [...bySymbol].sort(([a], [b]) => a.localeCompare(b));
   const headings = portfolio
     ? ["Symbol", "Lots", "Shares", "Value"]
     : ["Symbol", "Lots", "Shares", "Proceeds", "Basis", "Gain"];
   const details = portfolio
     ? [
-        ["Total Wealth", formatUsd(summary.total)],
-        ["Current Concentration", `${summary.current.toFixed(2)}%`],
+        ["Total Wealth", formatUsd(summary.wealth)],
+        ["Current Concentration", `${summary.currentConcentration.toFixed(2)}%`],
       ]
     : [
-        ["Minimum Sale", formatUsd(summary.minimum)],
-        ["Final Concentration", `${summary.ending.toFixed(2)}%`],
+        ["Minimum Sale", formatUsd(summary.minimumSale)],
+        ["Final Concentration", `${summary.finalConcentration.toFixed(2)}%`],
       ];
-  const lotCount = symbols.reduce(
-    (count, [, position]) => count + (portfolio ? position.lots : position.selectedLots),
-    0,
-  );
   return (
     <section class="overflow-auto" aria-label={`${kind} summary`}>
       <table class="summary summary-table">
@@ -64,13 +59,9 @@ export function SummaryView({
           {symbols.map(([symbol, position]) => (
             <tr key={symbol}>
               <th scope="row">{symbol}</th>
-              <td class="numeric-cell">{portfolio ? position.lots : position.selectedLots}</td>
-              <td class="numeric-cell">
-                {(portfolio ? position.shares : position.selectedShares).toFixed()}
-              </td>
-              <td class="numeric-cell">
-                {formatUsd(portfolio ? position.value : position.proceeds)}
-              </td>
+              <td class="numeric-cell">{position.lots}</td>
+              <td class="numeric-cell">{position.shares.toFixed()}</td>
+              <td class="numeric-cell">{formatUsd(position.value)}</td>
               {!portfolio && (
                 <>
                   <td class="numeric-cell">{formatUsd(position.basis)}</td>
@@ -83,15 +74,13 @@ export function SummaryView({
         <tfoot>
           <tr>
             <th scope="row">Total</th>
-            <td class="numeric-cell">{lotCount}</td>
-            <td class="numeric-cell">
-              {(portfolio ? summary.shares : summary.selectedShares).toFixed()}
-            </td>
-            <td class="numeric-cell">{formatUsd(portfolio ? summary.value : summary.proceeds)}</td>
+            <td class="numeric-cell">{total.lots}</td>
+            <td class="numeric-cell">{total.shares.toFixed()}</td>
+            <td class="numeric-cell">{formatUsd(total.value)}</td>
             {!portfolio && (
               <>
-                <td class="numeric-cell">{formatUsd(summary.basis)}</td>
-                <td class={gainCellClass(summary.gain)}>{formatUsd(summary.gain)}</td>
+                <td class="numeric-cell">{formatUsd(total.basis)}</td>
+                <td class={gainCellClass(total.gain)}>{formatUsd(total.gain)}</td>
               </>
             )}
           </tr>

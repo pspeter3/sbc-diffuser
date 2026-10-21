@@ -26,13 +26,13 @@ describe("planning", (): void => {
     expect(recommend(lots, parameters("0"))).toEqual(keys(cheap, expensive, free));
     expect(recommend(lots, parameters("100"))).toEqual(keys());
     const summary = summarize(lots, parameters(), keys(free));
-    expect(summary.value.toFixed()).toBe("580");
-    expect(summary.proceeds.toFixed()).toBe("360");
-    expect(summary.basis.toFixed()).toBe("0");
-    expect(summary.selectedShares.toFixed()).toBe("9");
-    expect(summary.gain.toFixed()).toBe("360");
-    expect(summary.minimum.toFixed()).toBe("290");
-    expect(summary.ending.toFixed(2)).toBe("37.93");
+    expect(summary.portfolio.total.value.toFixed()).toBe("580");
+    expect(summary.sale.total.value.toFixed()).toBe("360");
+    expect(summary.sale.total.basis.toFixed()).toBe("0");
+    expect(summary.sale.total.shares.toFixed()).toBe("9");
+    expect(summary.sale.total.gain.toFixed()).toBe("360");
+    expect(summary.minimumSale.toFixed()).toBe("290");
+    expect(summary.finalConcentration.toFixed(2)).toBe("37.93");
   });
   it("breaks basis ties by date, overshoots whole groups, and handles empty holdings", (): void => {
     const later = lot({ vestDate: "2026-02-01" });
@@ -41,8 +41,8 @@ describe("planning", (): void => {
     const lots = [later, earlier, otherGrant];
     expect(recommend(lots, parameters("90"))).toEqual(keys(earlier, otherGrant));
     expect(recommend([], parameters()).size).toBe(0);
-    expect(summarize([], parameters(), new Set()).ending.toFixed()).toBe("0");
-    expect(summarize([], parameters(), new Set()).current.toFixed()).toBe("0");
+    expect(summarize([], parameters(), new Set()).finalConcentration.toFixed()).toBe("0");
+    expect(summarize([], parameters(), new Set()).currentConcentration.toFixed()).toBe("0");
     expect(recommend(lots, parameters("50", "10000")).size).toBe(0);
   });
 });

@@ -3,6 +3,7 @@ import { type JSX } from "preact";
 import { useMemo } from "preact/hooks";
 
 import { formatUsd } from "./format.ts";
+import { valuation } from "./planner.ts";
 import { lotKey, type RsuLot, type RsuLotList } from "./schema.ts";
 
 const numericColumns: ReadonlySet<string> = new Set([
@@ -54,6 +55,7 @@ export function LotTableView({
           {sorted.map((lot) => {
             const key = lotKey(lot);
             const price = prices?.get(lot.symbol);
+            const result = price === undefined ? null : valuation(lot, price);
             return (
               <tr key={key}>
                 <td>
@@ -71,14 +73,8 @@ export function LotTableView({
                 <td>{lot.vestPeriod}</td>
                 <td class="numeric-cell">{lot.quantity.toFixed()}</td>
                 <td class="numeric-cell">{formatUsd(lot.estimatedCostBasisPerShare)}</td>
-                <td class="numeric-cell">
-                  {price === undefined ? "—" : formatUsd(lot.quantity.times(price))}
-                </td>
-                <td class="numeric-cell">
-                  {price === undefined
-                    ? "—"
-                    : formatUsd(lot.quantity.times(price.minus(lot.estimatedCostBasisPerShare)))}
-                </td>
+                <td class="numeric-cell">{result === null ? "—" : formatUsd(result.value)}</td>
+                <td class="numeric-cell">{result === null ? "—" : formatUsd(result.gain)}</td>
               </tr>
             );
           })}
