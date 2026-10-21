@@ -8,12 +8,6 @@ export interface Parameters {
   target: BigNumber;
 }
 
-export function decimalInput(value: string, maximum?: number): BigNumber | null {
-  if (!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(value)) return null;
-  const number = new BigNumber(value);
-  return number.isFinite() && (maximum === undefined || number.lte(maximum)) ? number : null;
-}
-
 export function priceFor(parameters: Parameters, symbol: string): BigNumber {
   const price = parameters.prices.get(symbol);
   if (price === undefined) throw new Error(`Missing stock price for ${symbol}`);

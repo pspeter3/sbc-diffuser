@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/preact";
+import { BigNumber } from "bignumber.js";
 import { expect, it, vi } from "vite-plus/test";
 
 import { lot, parameters } from "../tests/helpers.ts";
@@ -14,8 +15,10 @@ it("validates all parameters and safely labels each symbol", (): void => {
   const price = screen.getByLabelText<HTMLInputElement>(/^AAA/);
   const other = screen.getByLabelText(/^<img src=x>/);
   expect(document.querySelector("img")).toBeNull();
-  expect(price.getAttribute("aria-describedby")).toBe("AAA-helper");
-  expect(screen.getAllByText("Price per share (USD)")).toHaveLength(2);
+  for (const input of [price, other]) {
+    const description = document.getElementById(input.getAttribute("aria-describedby") ?? "");
+    expect(description?.textContent).toBe("Price per share (USD)");
+  }
   const form = screen.getByRole("button", { name: "Recommend" }).closest("form");
   if (form === null) throw new Error("Missing planner form");
   fireEvent.submit(form);
@@ -37,6 +40,38 @@ it("validates all parameters and safely labels each symbol", (): void => {
       ["AAA", parameters().prices.get("AAA")],
       ["<img src=x>", parameters().prices.get("BBB")],
     ]),
+  });
+});
+
+it.each([
+  ["Wealth", ""],
+  ["Wealth", "-1"],
+  ["Wealth", "1e2"],
+  ["Wealth", "1.2.3"],
+  ["Concentration", "100.01"],
+])("rejects %s of %j", (label, value): void => {
+  const submit = vi.fn();
+  render(<PlannerFormView symbols={[]} onSubmit={submit} />);
+  fireEvent.input(screen.getByLabelText("Wealth"), { target: { value: "0.01" } });
+  fireEvent.input(screen.getByLabelText("Concentration"), { target: { value: "100" } });
+  const input = screen.getByLabelText<HTMLInputElement>(label);
+  fireEvent.input(input, { target: { value } });
+  // Submit directly: browsers would block most of these values before the handler runs.
+  fireEvent.submit(input.form ?? input);
+  expect(submit).not.toHaveBeenCalled();
+  expect(input.getAttribute("aria-invalid")).toBe("true");
+});
+
+it("accepts boundary values", (): void => {
+  const submit = vi.fn();
+  render(<PlannerFormView symbols={[]} onSubmit={submit} />);
+  fireEvent.input(screen.getByLabelText("Wealth"), { target: { value: "0.01" } });
+  fireEvent.input(screen.getByLabelText("Concentration"), { target: { value: "100" } });
+  fireEvent.click(screen.getByRole("button", { name: "Recommend" }));
+  expect(submit).toHaveBeenCalledWith({
+    prices: new Map(),
+    wealth: new BigNumber("0.01"),
+    target: new BigNumber(100),
   });
 });
 

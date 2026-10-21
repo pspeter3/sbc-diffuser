@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 
 import { lot, parameters } from "../tests/helpers.ts";
-import { decimalInput, priceFor, recommend, summarize } from "./planner.ts";
+import { priceFor, recommend, summarize } from "./planner.ts";
 import { lotKey, type RsuLot } from "./schema.ts";
 
 function keys(...lots: RsuLot[]): Set<string> {
@@ -9,12 +9,7 @@ function keys(...lots: RsuLot[]): Set<string> {
 }
 
 describe("planning", (): void => {
-  it("validates decimal fields", (): void => {
-    for (const value of ["", "-1", "NaN", "Infinity", "1e2", "1.2.3"])
-      expect(decimalInput(value)).toBeNull();
-    expect(decimalInput("101", 100)).toBeNull();
-    expect(decimalInput("100", 100)?.toFixed()).toBe("100");
-    expect(decimalInput("0.01")?.toFixed()).toBe("0.01");
+  it("requires a price for every symbol", (): void => {
     expect(() => priceFor(parameters(), "missing")).toThrow("Missing stock price");
   });
   it("ranks weighted vest-date groups across grants and prices symbols independently", (): void => {

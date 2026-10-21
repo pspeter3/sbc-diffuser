@@ -1,7 +1,37 @@
-import { type BigNumber } from "bignumber.js";
+import { BigNumber } from "bignumber.js";
 import { type JSX, type TargetedInputEvent, type TargetedSubmitEvent } from "preact";
+import { useId } from "preact/hooks";
+import * as z from "zod/mini";
 
-import { decimalInput, type Parameters } from "./planner.ts";
+import { type Parameters } from "./planner.ts";
+
+/** Plain non-negative decimals; rejects signs, exponents, and non-finite values. */
+function decimal(
+  message: string,
+  valid: (value: BigNumber) => boolean = () => true,
+): z.ZodMiniType<BigNumber, unknown> {
+  return z.pipe(
+    z
+      .string()
+      .check(
+        z.refine(
+          (value) => /^(?:\d+(?:\.\d*)?|\.\d+)$/.test(value) && valid(new BigNumber(value)),
+          message,
+        ),
+      ),
+    z.transform((value) => new BigNumber(value)),
+  );
+}
+
+// Field names match issue paths so each issue can be reported on its input.
+const parametersSchema = z.object({
+  prices: z.map(
+    z.string(),
+    decimal("Enter a positive stock price.", (value) => value.gt(0)),
+  ),
+  wealth: decimal("Enter a valid value."),
+  target: decimal("Enter a percentage from 0 to 100.", (value) => value.lte(100)),
+});
 
 export function PlannerFormView({
   symbols,
@@ -10,29 +40,26 @@ export function PlannerFormView({
   symbols: ReadonlyArray<string>;
   onSubmit: (parameters: Parameters) => void;
 }): JSX.Element {
+  const id = useId();
   function submit(event: TargetedSubmitEvent<HTMLFormElement>): void {
     event.preventDefault();
-    const inputs = [...event.currentTarget.querySelectorAll("input")];
-    const prices = new Map<string, BigNumber>();
-    let wealth: BigNumber | null = null;
-    let target: BigNumber | null = null;
-    for (const input of inputs) {
-      const value = decimalInput(input.value, input.name === "target" ? 100 : undefined);
-      const isPrice = input.name.startsWith("price:");
-      const valid = value !== null && (!isPrice || value.gt(0));
-      input.setAttribute("aria-invalid", String(!valid));
-      input.setCustomValidity(
-        valid ? "" : isPrice ? "Enter a positive stock price." : "Enter a valid value.",
-      );
-      if (valid) {
-        if (isPrice) prices.set(input.name.slice(6), value);
-        else if (input.name === "wealth") wealth = value;
-        else target = value;
-      }
+    const form = event.currentTarget;
+    const values = new FormData(form);
+    const result = parametersSchema.safeParse({
+      prices: new Map(symbols.map((symbol) => [symbol, values.get(`prices.${symbol}`)])),
+      wealth: values.get("wealth"),
+      target: values.get("target"),
+    });
+    const issues = new Map(
+      result.error?.issues.map((issue) => [issue.path.join("."), issue.message]),
+    );
+    for (const input of form.querySelectorAll("input")) {
+      const message = issues.get(input.name) ?? "";
+      input.setCustomValidity(message);
+      input.setAttribute("aria-invalid", String(message !== ""));
     }
-    if (prices.size === symbols.length && wealth !== null && target !== null)
-      onSubmit({ prices, wealth, target });
-    else event.currentTarget.reportValidity();
+    if (result.success) onSubmit(result.data);
+    else form.reportValidity();
   }
   function clearValidity(event: TargetedInputEvent<HTMLInputElement>): void {
     event.currentTarget.setCustomValidity("");
@@ -40,19 +67,19 @@ export function PlannerFormView({
   }
   return (
     <form onSubmit={submit}>
-      {symbols.map((symbol) => (
+      {symbols.map((symbol, index) => (
         <label key={symbol}>
           {symbol}
           <input
             onInput={clearValidity}
-            name={`price:${symbol}`}
+            name={`prices.${symbol}`}
             type="number"
             min="0"
             step="any"
             required
-            aria-describedby={`${symbol}-helper`}
+            aria-describedby={`${id}-price-${String(index)}`}
           />
-          <small id={`${symbol}-helper`}>Price per share (USD)</small>
+          <small id={`${id}-price-${String(index)}`}>Price per share (USD)</small>
         </label>
       ))}
       <label htmlFor="wealth">Wealth</label>
