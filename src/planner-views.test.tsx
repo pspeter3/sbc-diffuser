@@ -6,7 +6,7 @@ import { LotTableView } from "./lot-table-view.tsx";
 import { PlannerFormView } from "./planner-form-view.tsx";
 import { summarize } from "./planner.ts";
 import { lotKey } from "./schema.ts";
-import { SummaryView } from "./summary-view.tsx";
+import { PortfolioSummary, SaleSummary } from "./summary-view.tsx";
 
 it("validates all parameters and safely labels each symbol", (): void => {
   const submit = vi.fn();
@@ -128,23 +128,16 @@ it("aligns dates and numeric cells and formats USD without losing precision", ()
   expect(screen.getAllByRole("row")[1]?.children[6]?.textContent).toBe("$9,007,199,254,740,993.01");
 });
 
-it("renders the actual selection and clears stale summaries", (): void => {
+it("renders the actual selection", (): void => {
   const single = lot();
-  const { rerender, container } = render(
-    <SummaryView kind="Sale" summary={summarize([single], parameters(), new Set())} />,
+  const { rerender } = render(
+    <SaleSummary summary={summarize([single], parameters(), new Set())} />,
   );
   expect(screen.getByRole("row", { name: "Total 0 0 $0.00 $0.00 $0.00" })).toBeTruthy();
   expect(screen.getByText("Final Concentration").nextElementSibling?.textContent).toBe("100.00%");
-  rerender(
-    <SummaryView
-      kind="Sale"
-      summary={summarize([single], parameters(), new Set([lotKey(single)]))}
-    />,
-  );
+  rerender(<SaleSummary summary={summarize([single], parameters(), new Set([lotKey(single)]))} />);
   expect(screen.getByRole("row", { name: "Total 1 10 $200.00 $100.00 $100.00" })).toBeTruthy();
   expect(screen.getByText("Final Concentration").nextElementSibling?.textContent).toBe("0.00%");
-  rerender(<SummaryView kind="Sale" summary={null} />);
-  expect(container.textContent).toBe("");
 });
 
 it("separates held holdings from selected sales with exact totals and captions", (): void => {
@@ -154,8 +147,7 @@ it("separates held holdings from selected sales with exact totals and captions",
   const lots = [sold, kept, partial];
   const configured = parameters("50", "100");
   const { rerender } = render(
-    <SummaryView
-      kind="Portfolio"
+    <PortfolioSummary
       summary={summarize(lots, configured, new Set([lotKey(sold), lotKey(partial)]))}
     />,
   );
@@ -170,10 +162,7 @@ it("separates held holdings from selected sales with exact totals and captions",
   expect(screen.getByText("Total Wealth").nextElementSibling?.textContent).toBe("$540.00");
   expect(screen.getByText("Current Concentration").nextElementSibling?.textContent).toBe("81.48%");
   rerender(
-    <SummaryView
-      kind="Sale"
-      summary={summarize(lots, configured, new Set([lotKey(sold), lotKey(partial)]))}
-    />,
+    <SaleSummary summary={summarize(lots, configured, new Set([lotKey(sold), lotKey(partial)]))} />,
   );
   expect(cells()).toEqual([
     ["Symbol", "Lots", "Shares", "Proceeds", "Basis", "Gain"],
@@ -191,16 +180,14 @@ it("separates held holdings from selected sales with exact totals and captions",
       expect(cell.classList.contains("numeric-cell")).toBe(true);
   }
   expect(screen.getByRole("row", { name: /^Total / }).closest("tfoot")).not.toBeNull();
-  rerender(
-    <SummaryView kind="Sale" summary={summarize(lots, configured, new Set([lotKey(partial)]))} />,
-  );
+  rerender(<SaleSummary summary={summarize(lots, configured, new Set([lotKey(partial)]))} />);
   expect(screen.queryByRole("row", { name: /^BBB / })).toBeNull();
-  rerender(<SummaryView kind="Sale" summary={summarize(lots, configured, new Set())} />);
+  rerender(<SaleSummary summary={summarize(lots, configured, new Set())} />);
   expect(cells()).toEqual([
     ["Symbol", "Lots", "Shares", "Proceeds", "Basis", "Gain"],
     ["Total", "0", "0", "$0.00", "$0.00", "$0.00"],
   ]);
-  rerender(<SummaryView kind="Portfolio" summary={summarize([], configured, new Set())} />);
+  rerender(<PortfolioSummary summary={summarize([], configured, new Set())} />);
   expect(cells()).toEqual([
     ["Symbol", "Lots", "Shares", "Value"],
     ["Total", "0", "0", "$0.00"],
@@ -211,8 +198,7 @@ it("colors gains and losses while leaving zero neutral", (): void => {
   const gain = lot({ quantity: "1" });
   const loss = lot({ symbol: "BBB", basis: "50", quantity: "1" });
   render(
-    <SummaryView
-      kind="Sale"
+    <SaleSummary
       summary={summarize([gain, loss], parameters(), new Set([lotKey(gain), lotKey(loss)]))}
     />,
   );

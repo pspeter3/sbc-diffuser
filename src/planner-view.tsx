@@ -5,7 +5,7 @@ import { LotTableView } from "./lot-table-view.tsx";
 import { PlannerFormView } from "./planner-form-view.tsx";
 import { type Parameters, recommend, summarize } from "./planner.ts";
 import { type RsuLotList } from "./schema.ts";
-import { SummaryView } from "./summary-view.tsx";
+import { PortfolioSummary, SaleSummary } from "./summary-view.tsx";
 
 export function Planner({ lots }: { lots: RsuLotList }): JSX.Element {
   const symbols = useMemo(() => [...new Set(lots.map((lot) => lot.symbol))].sort(), [lots]);
@@ -33,11 +33,11 @@ export function Planner({ lots }: { lots: RsuLotList }): JSX.Element {
       </details>
       <details>
         <summary>Portfolio</summary>
-        <SummaryView kind="Portfolio" summary={summary} />
+        {summary !== null && <PortfolioSummary summary={summary} />}
       </details>
       <details>
         <summary>Sale</summary>
-        <SummaryView kind="Sale" summary={summary} />
+        {summary !== null && <SaleSummary summary={summary} />}
       </details>
       <details>
         <summary>Lots</summary>
