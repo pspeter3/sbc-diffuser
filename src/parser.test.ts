@@ -192,6 +192,19 @@ describe("RSU parser", () => {
     input.push({ sheet: "Options", data: [["anything"]] });
     expect(parseRsuLotList(input)).toEqual([]);
   });
+  it("rejects a repeated grant and vest period", () => {
+    const input = workbook();
+    const sheet = input[0];
+    const holding = sheet?.data[3];
+    if (holding === undefined) throw new Error("Missing fixture row");
+    sheet?.data.push([...holding]);
+    expect.assertions(1);
+    try {
+      parseRsuLotList(input);
+    } catch (error) {
+      expect(error).toHaveProperty("issues.0.path", ["Restricted Stock", 6, "vestPeriod"]);
+    }
+  });
   it("rejects non-finite vest identifiers", () => {
     expect(() => parseRsuLotList(changed(3, 18, Infinity))).toThrow();
   });

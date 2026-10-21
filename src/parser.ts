@@ -4,6 +4,7 @@ import * as z from "zod/mini";
 import {
   grantNumberSchema,
   isoDateSchema,
+  lotKey,
   type RsuLot,
   type RsuLotList,
   vestPeriodSchema,
@@ -107,6 +108,7 @@ const parser = z.pipe(
     }
 
     const lots: RsuLot[] = [];
+    const keys = new Set<string>();
     for (const { cell, row } of holdings) {
       const grantNumber = text(cell("grantNumber"));
       const vestPeriod = period(cell("vestPeriod"));
@@ -137,14 +139,20 @@ const parser = z.pipe(
         ? result.data.sellableQuantity
         : result.data.blockedShareQuantity;
       if (quantity === null || quantity.isZero()) continue;
-      lots.push({
+      const lot: RsuLot = {
         grantNumber: result.data.grantNumber,
         vestPeriod: result.data.vestPeriod,
         symbol: result.data.symbol,
         vestDate: result.data.vestDate,
         estimatedCostBasisPerShare: result.data.estimatedCostBasisPerShare,
         quantity,
-      });
+      };
+      if (keys.has(lotKey(lot))) {
+        fail(row, "vestPeriod", "Duplicate holding for this grant and vest period");
+        continue;
+      }
+      keys.add(lotKey(lot));
+      lots.push(lot);
     }
     return lots;
   }),
@@ -153,7 +161,7 @@ const parser = z.pipe(
 /**
  * Accepts decoded worksheets: [{ sheet: "Restricted Stock", data: [headers, ...rows] }].
  * Returns held Sellable Shares records in source order, counting blocked shares as held
- * and skipping records without any held shares.
+ * and skipping records without any held shares. Each grant and vest period is held once.
  * Throws a Zod error for invalid input.
  * Issue paths identify the worksheet, one-based row, and field or column.
  */

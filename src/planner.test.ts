@@ -2,6 +2,11 @@ import { describe, expect, it } from "vite-plus/test";
 
 import { lot, parameters } from "../tests/helpers.ts";
 import { decimalInput, priceFor, recommend, summarize } from "./planner.ts";
+import { lotKey, type RsuLot } from "./schema.ts";
+
+function keys(...lots: RsuLot[]): Set<string> {
+  return new Set(lots.map(lotKey));
+}
 
 describe("planning", (): void => {
   it("validates decimal fields", (): void => {
@@ -13,15 +18,14 @@ describe("planning", (): void => {
     expect(() => priceFor(parameters(), "missing")).toThrow("Missing stock price");
   });
   it("ranks weighted vest-date groups across grants and prices symbols independently", (): void => {
-    const lots = [
-      lot("AAA", "2026-01-01", "30", "1"),
-      lot("BBB", "2026-01-01", "0", "9", "2"),
-      lot("AAA", "2026-02-01", "5", "10"),
-    ];
-    expect([...recommend(lots, parameters("80"))]).toEqual([2]);
-    expect([...recommend(lots, parameters("0"))]).toEqual([2, 0, 1]);
-    expect([...recommend(lots, parameters("100"))]).toEqual([]);
-    const summary = summarize(lots, parameters(), new Set([1]));
+    const expensive = lot({ vestDate: "2026-01-01", basis: "30", quantity: "1" });
+    const free = lot({ symbol: "BBB", vestDate: "2026-01-01", basis: "0", quantity: "9" });
+    const cheap = lot({ vestDate: "2026-02-01", basis: "5", quantity: "10" });
+    const lots = [expensive, free, cheap];
+    expect(recommend(lots, parameters("80"))).toEqual(keys(cheap));
+    expect(recommend(lots, parameters("0"))).toEqual(keys(cheap, expensive, free));
+    expect(recommend(lots, parameters("100"))).toEqual(keys());
+    const summary = summarize(lots, parameters(), keys(free));
     expect(summary.value.toFixed()).toBe("580");
     expect(summary.proceeds.toFixed()).toBe("360");
     expect(summary.basis.toFixed()).toBe("0");
@@ -31,8 +35,11 @@ describe("planning", (): void => {
     expect(summary.ending.toFixed(2)).toBe("37.93");
   });
   it("breaks basis ties by date, overshoots whole groups, and handles empty holdings", (): void => {
-    const lots = [lot("AAA", "2026-02-01"), lot(), lot("AAA", "2026-01-01", "10", "10", "2")];
-    expect([...recommend(lots, parameters("90"))]).toEqual([1, 2]);
+    const later = lot({ vestDate: "2026-02-01" });
+    const earlier = lot();
+    const otherGrant = lot({ grant: "2" });
+    const lots = [later, earlier, otherGrant];
+    expect(recommend(lots, parameters("90"))).toEqual(keys(earlier, otherGrant));
     expect(recommend([], parameters()).size).toBe(0);
     expect(summarize([], parameters(), new Set()).ending.toFixed()).toBe("0");
     expect(summarize([], parameters(), new Set()).current.toFixed()).toBe("0");

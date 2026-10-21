@@ -1,6 +1,6 @@
 import { BigNumber } from "bignumber.js";
 
-import { type RsuLotList } from "./schema.ts";
+import { lotKey, type RsuLotList } from "./schema.ts";
 
 export interface Parameters {
   prices: ReadonlyMap<string, BigNumber>;
@@ -48,7 +48,7 @@ export interface Summary {
 export function summarize(
   lots: RsuLotList,
   parameters: Parameters,
-  selected: ReadonlySet<number>,
+  selected: ReadonlySet<string>,
 ): Summary {
   const positions = new Map<string, Omit<SymbolSummary, "gain">>();
   let shares = new BigNumber(0);
@@ -56,7 +56,7 @@ export function summarize(
   let selectedShares = new BigNumber(0);
   let proceeds = new BigNumber(0);
   let basis = new BigNumber(0);
-  lots.forEach((lot, index): void => {
+  for (const lot of lots) {
     const lotValue = lot.quantity.times(priceFor(parameters, lot.symbol));
     const position = positions.get(lot.symbol) ?? {
       lots: 0,
@@ -70,14 +70,14 @@ export function summarize(
     position.lots += 1;
     position.shares = position.shares.plus(lot.quantity);
     position.value = position.value.plus(lotValue);
-    if (selected.has(index)) {
+    if (selected.has(lotKey(lot))) {
       position.selectedLots += 1;
       position.selectedShares = position.selectedShares.plus(lot.quantity);
       position.proceeds = position.proceeds.plus(lotValue);
       position.basis = position.basis.plus(lot.quantity.times(lot.estimatedCostBasisPerShare));
     }
     positions.set(lot.symbol, position);
-  });
+  }
   const bySymbol = new Map<string, SymbolSummary>();
   for (const [symbol, position] of positions) {
     shares = shares.plus(position.shares);
@@ -108,27 +108,27 @@ export function summarize(
   };
 }
 
-export function recommend(lots: RsuLotList, parameters: Parameters): Set<number> {
-  const selected = new Set<number>();
+export function recommend(lots: RsuLotList, parameters: Parameters): Set<string> {
+  const selected = new Set<string>();
   const { minimum } = summarize(lots, parameters, selected);
   const groups = new Map<
     string,
-    { date: string; indices: number[]; shares: BigNumber; basis: BigNumber; proceeds: BigNumber }
+    { date: string; keys: string[]; shares: BigNumber; basis: BigNumber; proceeds: BigNumber }
   >();
-  lots.forEach((lot, index): void => {
+  for (const lot of lots) {
     const group = groups.get(lot.vestDate) ?? {
       date: lot.vestDate,
-      indices: [],
+      keys: [],
       shares: new BigNumber(0),
       basis: new BigNumber(0),
       proceeds: new BigNumber(0),
     };
-    group.indices.push(index);
+    group.keys.push(lotKey(lot));
     group.shares = group.shares.plus(lot.quantity);
     group.basis = group.basis.plus(lot.quantity.times(lot.estimatedCostBasisPerShare));
     group.proceeds = group.proceeds.plus(lot.quantity.times(priceFor(parameters, lot.symbol)));
     groups.set(lot.vestDate, group);
-  });
+  }
   // Compare weighted means by cross multiplication to avoid rounding during ranking.
   const ranked = [...groups.values()].sort((a, b) => {
     const comparison = b.basis.times(a.shares).comparedTo(a.basis.times(b.shares));
@@ -137,7 +137,7 @@ export function recommend(lots: RsuLotList, parameters: Parameters): Set<number>
   let proceeds = new BigNumber(0);
   for (const group of ranked) {
     if (proceeds.gte(minimum)) break;
-    for (const index of group.indices) selected.add(index);
+    for (const key of group.keys) selected.add(key);
     proceeds = proceeds.plus(group.proceeds);
   }
   return selected;

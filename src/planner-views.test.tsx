@@ -5,6 +5,7 @@ import { lot, parameters } from "../tests/helpers.ts";
 import { LotTableView } from "./lot-table-view.tsx";
 import { PlannerFormView } from "./planner-form-view.tsx";
 import { summarize } from "./planner.ts";
+import { lotKey } from "./schema.ts";
 import { SummaryView } from "./summary-view.tsx";
 
 it("validates all parameters and safely labels each symbol", (): void => {
@@ -40,12 +41,13 @@ it("validates all parameters and safely labels each symbol", (): void => {
 });
 
 it("sorts lots while preserving their identity and focus across renders", (): void => {
+  const top = lot({ basis: "30", period: "1" });
   const lots = [
-    lot("AAA", "2026-02-01"),
-    lot("AAA", "2026-01-01", "10", "10", "2"),
-    lot("AAA", "2026-01-01", "10", "10", "1", "10"),
-    lot("<script>", "2026-01-01", "10", "10", "1", "2"),
-    lot("AAA", "2026-01-01", "30"),
+    lot({ vestDate: "2026-02-01", period: "3" }),
+    lot({ grant: "2", period: "1" }),
+    lot({ period: "10" }),
+    lot({ symbol: "<script>", period: "2" }),
+    top,
   ];
   const onSelection = vi.fn();
   const { rerender } = render(
@@ -65,7 +67,7 @@ it("sorts lots while preserving their identity and focus across renders", (): vo
     <LotTableView
       lots={lots}
       prices={parameters().prices}
-      selected={new Set([4])}
+      selected={new Set([lotKey(top)])}
       onSelection={onSelection}
     />,
   );
@@ -84,7 +86,7 @@ it("sorts lots while preserving their identity and focus across renders", (): vo
   expect(document.activeElement).toBe(first);
   expect(first.checked).toBe(false);
   fireEvent.click(first);
-  expect(onSelection).toHaveBeenCalledWith(4, true);
+  expect(onSelection).toHaveBeenCalledWith(lotKey(top), true);
   expect(screen.getAllByText("$200.00")).toHaveLength(4);
   rerender(<LotTableView lots={[]} prices={null} selected={new Set()} onSelection={onSelection} />);
   expect(screen.queryByRole("checkbox")).toBeNull();
@@ -93,7 +95,7 @@ it("sorts lots while preserving their identity and focus across renders", (): vo
 it("aligns dates and numeric cells and formats USD without losing precision", (): void => {
   const { rerender } = render(
     <LotTableView
-      lots={[lot("AAA", "2026-01-01", "1000", "100.125")]}
+      lots={[lot({ basis: "1000", quantity: "100.125" })]}
       prices={parameters().prices}
       selected={new Set()}
       onSelection={vi.fn()}
@@ -117,7 +119,7 @@ it("aligns dates and numeric cells and formats USD without losing precision", ()
 
   rerender(
     <LotTableView
-      lots={[lot("AAA", "2026-01-01", "9007199254740993.01", "1")]}
+      lots={[lot({ basis: "9007199254740993.01", quantity: "1" })]}
       prices={null}
       selected={new Set()}
       onSelection={vi.fn()}
@@ -127,12 +129,18 @@ it("aligns dates and numeric cells and formats USD without losing precision", ()
 });
 
 it("renders the actual selection and clears stale summaries", (): void => {
+  const single = lot();
   const { rerender, container } = render(
-    <SummaryView kind="Sale" summary={summarize([lot()], parameters(), new Set())} />,
+    <SummaryView kind="Sale" summary={summarize([single], parameters(), new Set())} />,
   );
   expect(screen.getByRole("row", { name: "Total 0 0 $0.00 $0.00 $0.00" })).toBeTruthy();
   expect(screen.getByText("Final Concentration").nextElementSibling?.textContent).toBe("100.00%");
-  rerender(<SummaryView kind="Sale" summary={summarize([lot()], parameters(), new Set([0]))} />);
+  rerender(
+    <SummaryView
+      kind="Sale"
+      summary={summarize([single], parameters(), new Set([lotKey(single)]))}
+    />,
+  );
   expect(screen.getByRole("row", { name: "Total 1 10 $200.00 $100.00 $100.00" })).toBeTruthy();
   expect(screen.getByText("Final Concentration").nextElementSibling?.textContent).toBe("0.00%");
   rerender(<SummaryView kind="Sale" summary={null} />);
@@ -140,14 +148,16 @@ it("renders the actual selection and clears stale summaries", (): void => {
 });
 
 it("separates held holdings from selected sales with exact totals and captions", (): void => {
-  const lots = [
-    lot("BBB", "2026-01-01", "10", "5"),
-    lot("AAA", "2026-01-02", "10", "10"),
-    lot("AAA", "2026-01-03", "5", "2"),
-  ];
+  const sold = lot({ symbol: "BBB", quantity: "5" });
+  const kept = lot({ vestDate: "2026-01-02" });
+  const partial = lot({ vestDate: "2026-01-03", basis: "5", quantity: "2" });
+  const lots = [sold, kept, partial];
   const configured = parameters("50", "100");
   const { rerender } = render(
-    <SummaryView kind="Portfolio" summary={summarize(lots, configured, new Set([0, 2]))} />,
+    <SummaryView
+      kind="Portfolio"
+      summary={summarize(lots, configured, new Set([lotKey(sold), lotKey(partial)]))}
+    />,
   );
   const cells = (): (string | null)[][] =>
     screen.getAllByRole("row").map((row) => [...row.children].map((cell) => cell.textContent));
@@ -159,7 +169,12 @@ it("separates held holdings from selected sales with exact totals and captions",
   ]);
   expect(screen.getByText("Total Wealth").nextElementSibling?.textContent).toBe("$540.00");
   expect(screen.getByText("Current Concentration").nextElementSibling?.textContent).toBe("81.48%");
-  rerender(<SummaryView kind="Sale" summary={summarize(lots, configured, new Set([0, 2]))} />);
+  rerender(
+    <SummaryView
+      kind="Sale"
+      summary={summarize(lots, configured, new Set([lotKey(sold), lotKey(partial)]))}
+    />,
+  );
   expect(cells()).toEqual([
     ["Symbol", "Lots", "Shares", "Proceeds", "Basis", "Gain"],
     ["AAA", "1", "2", "$40.00", "$10.00", "$30.00"],
@@ -176,7 +191,9 @@ it("separates held holdings from selected sales with exact totals and captions",
       expect(cell.classList.contains("numeric-cell")).toBe(true);
   }
   expect(screen.getByRole("row", { name: /^Total / }).closest("tfoot")).not.toBeNull();
-  rerender(<SummaryView kind="Sale" summary={summarize(lots, configured, new Set([2]))} />);
+  rerender(
+    <SummaryView kind="Sale" summary={summarize(lots, configured, new Set([lotKey(partial)]))} />,
+  );
   expect(screen.queryByRole("row", { name: /^BBB / })).toBeNull();
   rerender(<SummaryView kind="Sale" summary={summarize(lots, configured, new Set())} />);
   expect(cells()).toEqual([
@@ -191,14 +208,12 @@ it("separates held holdings from selected sales with exact totals and captions",
 });
 
 it("colors gains and losses while leaving zero neutral", (): void => {
+  const gain = lot({ quantity: "1" });
+  const loss = lot({ symbol: "BBB", basis: "50", quantity: "1" });
   render(
     <SummaryView
       kind="Sale"
-      summary={summarize(
-        [lot("AAA", "2026-01-01", "10", "1"), lot("BBB", "2026-01-01", "50", "1")],
-        parameters(),
-        new Set([0, 1]),
-      )}
+      summary={summarize([gain, loss], parameters(), new Set([lotKey(gain), lotKey(loss)]))}
     />,
   );
   const rows = screen.getAllByRole("row");

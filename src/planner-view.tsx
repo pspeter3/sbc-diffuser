@@ -10,7 +10,7 @@ import { SummaryView } from "./summary-view.tsx";
 export function Planner({ lots }: { lots: RsuLotList }): JSX.Element {
   const symbols = useMemo(() => [...new Set(lots.map((lot) => lot.symbol))].sort(), [lots]);
   const [parameters, setParameters] = useState<Parameters | null>(null);
-  const [selected, setSelected] = useState<ReadonlySet<number>>(new Set());
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const section = useRef<HTMLElement>(null);
   const configuration = useRef<HTMLDetailsElement>(null);
   const summary = parameters === null ? null : summarize(lots, parameters, selected);
@@ -45,11 +45,11 @@ export function Planner({ lots }: { lots: RsuLotList }): JSX.Element {
           lots={lots}
           prices={parameters?.prices ?? null}
           selected={selected}
-          onSelection={(index, checked) => {
+          onSelection={(key, checked) => {
             setSelected((previous) => {
               const next = new Set(previous);
-              if (checked) next.add(index);
-              else next.delete(index);
+              if (checked) next.add(key);
+              else next.delete(key);
               return next;
             });
           }}

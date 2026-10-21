@@ -28,3 +28,8 @@ export interface RsuLot {
 }
 
 export type RsuLotList = ReadonlyArray<RsuLot>;
+
+/** Identifies a lot across sorting and re-renders; the parser rejects duplicates. */
+export function lotKey(lot: RsuLot): string {
+  return JSON.stringify([lot.grantNumber, lot.vestPeriod]);
+}

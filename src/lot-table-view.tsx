@@ -3,7 +3,7 @@ import { type JSX } from "preact";
 import { useMemo } from "preact/hooks";
 
 import { formatUsd } from "./format.ts";
-import { type RsuLot, type RsuLotList } from "./schema.ts";
+import { lotKey, type RsuLot, type RsuLotList } from "./schema.ts";
 
 const numericColumns: ReadonlySet<string> = new Set([
   "Vest",
@@ -20,13 +20,10 @@ export function LotTableView({
 }: {
   lots: RsuLotList;
   prices: ReadonlyMap<string, BigNumber> | null;
-  selected: ReadonlySet<number>;
-  onSelection: (index: number, checked: boolean) => void;
+  selected: ReadonlySet<string>;
+  onSelection: (key: string, checked: boolean) => void;
 }): JSX.Element {
-  const sorted = useMemo(
-    () => lots.map((lot, index) => ({ lot, index })).sort((a, b) => compareLots(a.lot, b.lot)),
-    [lots],
-  );
+  const sorted = useMemo(() => lots.toSorted(compareLots), [lots]);
   return (
     <section class="overflow-auto" aria-label="Held RSU lots">
       <table>
@@ -54,17 +51,18 @@ export function LotTableView({
           </tr>
         </thead>
         <tbody>
-          {sorted.map(({ lot, index }) => {
+          {sorted.map((lot) => {
+            const key = lotKey(lot);
             const price = prices?.get(lot.symbol);
             return (
-              <tr key={index}>
+              <tr key={key}>
                 <td>
                   <input
                     type="checkbox"
                     disabled={prices === null}
-                    checked={selected.has(index)}
+                    checked={selected.has(key)}
                     aria-label={`Plan to sell ${lot.symbol}, grant ${lot.grantNumber}, vest period ${lot.vestPeriod}, ${lot.vestDate}`}
-                    onChange={(event) => onSelection(index, event.currentTarget.checked)}
+                    onChange={(event) => onSelection(key, event.currentTarget.checked)}
                   />
                 </td>
                 <td>{lot.symbol}</td>
