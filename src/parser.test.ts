@@ -1,5 +1,6 @@
 import { BigNumber } from "bignumber.js";
 import { describe, expect, it } from "vite-plus/test";
+import * as z from "zod/mini";
 
 import { row, workbook, type Worksheet } from "../tests/workbook.ts";
 import { parseRsuLotList } from "./parser.ts";
@@ -29,6 +30,19 @@ function changed(index: number, column: number, value: unknown): Worksheet[] {
   cells[column] = value;
   return sheets;
 }
+
+/** Paths of every issue the parser reports; fails if parsing succeeds or throws otherwise. */
+function failures(input: unknown): unknown[] {
+  try {
+    parseRsuLotList(input);
+  } catch (error) {
+    if (error instanceof z.core.$ZodError) return error.issues.map((issue) => issue.path);
+    throw error;
+  }
+  throw new Error("Expected the workbook to be rejected");
+}
+
+const sheet = "Restricted Stock";
 
 describe("RSU parser", () => {
   it("returns only current lots with exact decimals", () => {
@@ -110,7 +124,7 @@ describe("RSU parser", () => {
     expect(parseRsuLotList(input).map((lot) => lot.quantity.toString())).toEqual(held);
   });
   it.each([-1, "junk", "Infinity"])("rejects invalid blocked quantity %s", (value) => {
-    expect(() => parseRsuLotList(changed(3, 30, value))).toThrow();
+    expect(failures(changed(3, 30, value))).toEqual([[sheet, 4, "blockedShareQuantity"]]);
   });
   it.each(["2025-09-22", "9/22/2025", new Date("2025-09-22T00:00:00Z")])(
     "normalizes date %s",
@@ -131,38 +145,39 @@ describe("RSU parser", () => {
   it.each([null, undefined, "", "junk", "Infinity", Infinity, -1, "0xff", "1e9999999999"])(
     "rejects invalid quantity %s",
     (value) => {
-      expect(() => parseRsuLotList(changed(3, 32, value))).toThrow();
+      expect(failures(changed(3, 32, value))).toEqual([[sheet, 4, "sellableQuantity"]]);
     },
   );
   it.each([null, "", "2025-02-30", "30-Feb-2025", "01-XYZ-2025", new Date(NaN)])(
     "rejects invalid date %s",
     (value) => {
-      expect(() => parseRsuLotList(changed(2, 19, value))).toThrow();
+      expect(failures(changed(2, 19, value))).toEqual([[sheet, 3, "vestDate"]]);
     },
   );
   it.each([
     [1, 1, null, 2, "symbol"],
     [2, 19, null, 3, "vestDate"],
     [3, 35, null, 4, "estimatedCostBasisPerShare"],
-  ] as const)("locates invalid field", (row, col, value, sourceRow, field) => {
-    expect.assertions(1);
-    try {
-      parseRsuLotList(changed(row, col, value));
-    } catch (error) {
-      expect(error).toHaveProperty("issues.0.path", ["Restricted Stock", sourceRow, field]);
-    }
+  ] as const)("locates invalid %s on its source row", (row, col, value, sourceRow, field) => {
+    expect(failures(changed(row, col, value))).toEqual([[sheet, sourceRow, field]]);
   });
-  it("rejects absent or malformed sheets and headers", () => {
-    for (const input of [
-      [],
-      [{ sheet: "Restricted Stock", data: [] }],
-      changed(0, 32, "Wrong"),
-      null,
-    ])
-      expect(() => parseRsuLotList(input)).toThrow();
+  it.each([
+    ["a missing sheet", [], [[sheet, 1, "sheet"]]],
+    ["a wrong header", changed(0, 32, "Wrong"), [[sheet, 1, 32]]],
+    ["a non-workbook", null, [[]]],
+  ])("rejects %s", (_, input, paths) => {
+    expect(failures(input)).toEqual(paths);
   });
-  it.each([1, 2])("rejects missing related records %s", (index) => {
-    expect(() => parseRsuLotList(changed(index, 0, "Ignored"))).toThrow();
+  it("reports every missing header", () => {
+    expect(failures([{ sheet, data: [] }])).toEqual(
+      [0, 1, 11, 18, 19, 30, 32, 35].map((column) => [sheet, 1, column]),
+    );
+  });
+  it.each([
+    [1, "grantNumber"],
+    [2, "vestPeriod"],
+  ])("rejects a holding missing related record %s", (index, field) => {
+    expect(failures(changed(index, 0, "Ignored"))).toEqual([[sheet, 4, field]]);
   });
   it("ignores other sheets and unrelated records", () => {
     const input = changed(3, 0, "Tax Withholding");
@@ -175,14 +190,9 @@ describe("RSU parser", () => {
     const holding = sheet?.data[3];
     if (holding === undefined) throw new Error("Missing fixture row");
     sheet?.data.push([...holding]);
-    expect.assertions(1);
-    try {
-      parseRsuLotList(input);
-    } catch (error) {
-      expect(error).toHaveProperty("issues.0.path", ["Restricted Stock", 6, "vestPeriod"]);
-    }
+    expect(failures(input)).toEqual([["Restricted Stock", 6, "vestPeriod"]]);
   });
   it("rejects non-finite vest identifiers", () => {
-    expect(() => parseRsuLotList(changed(3, 18, Infinity))).toThrow();
+    expect(failures(changed(3, 18, Infinity))).toEqual([[sheet, 4, "vestPeriod"]]);
   });
 });
