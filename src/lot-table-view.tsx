@@ -3,16 +3,39 @@ import { type JSX } from "preact";
 import { useMemo } from "preact/hooks";
 
 import { formatUsd } from "./format.ts";
-import { valuation } from "./planner.ts";
+import { type Valuation, valuation } from "./planner.ts";
 import { lotKey, type RsuLot, type RsuLotList } from "./schema.ts";
 
-const numericColumns: ReadonlySet<string> = new Set([
-  "Vest",
-  "Shares",
-  "Basis",
-  "Proceeds",
-  "Result",
-]);
+interface Column {
+  label: string;
+  numeric: boolean;
+  /** Valuation is null until prices are configured. */
+  text: (lot: RsuLot, valued: Valuation | null) => string;
+}
+
+const columns: ReadonlyArray<Column> = [
+  { label: "Symbol", numeric: false, text: (lot) => lot.symbol },
+  { label: "Vest", numeric: true, text: (lot) => lot.vestDate },
+  { label: "Grant", numeric: false, text: (lot) => lot.grantNumber },
+  { label: "Period", numeric: false, text: (lot) => lot.vestPeriod },
+  { label: "Shares", numeric: true, text: (lot) => lot.quantity.toFixed() },
+  { label: "Basis", numeric: true, text: (lot) => formatUsd(lot.estimatedCostBasisPerShare) },
+  {
+    label: "Proceeds",
+    numeric: true,
+    text: (_, valued) => (valued === null ? "—" : formatUsd(valued.value)),
+  },
+  {
+    label: "Result",
+    numeric: true,
+    text: (_, valued) => (valued === null ? "—" : formatUsd(valued.gain)),
+  },
+];
+
+function cellClass(column: Column): string | undefined {
+  return column.numeric ? "numeric-cell" : undefined;
+}
+
 export function LotTableView({
   lots,
   prices,
@@ -30,23 +53,10 @@ export function LotTableView({
       <table>
         <thead>
           <tr>
-            {[
-              "Sell",
-              "Symbol",
-              "Vest",
-              "Grant",
-              "Period",
-              "Shares",
-              "Basis",
-              "Proceeds",
-              "Result",
-            ].map((label) => (
-              <th
-                key={label}
-                scope="col"
-                class={numericColumns.has(label) ? "numeric-cell" : undefined}
-              >
-                {label}
+            <th scope="col">Sell</th>
+            {columns.map((column) => (
+              <th key={column.label} scope="col" class={cellClass(column)}>
+                {column.label}
               </th>
             ))}
           </tr>
@@ -55,7 +65,7 @@ export function LotTableView({
           {sorted.map((lot) => {
             const key = lotKey(lot);
             const price = prices?.get(lot.symbol);
-            const result = price === undefined ? null : valuation(lot, price);
+            const valued = price === undefined ? null : valuation(lot, price);
             return (
               <tr key={key}>
                 <td>
@@ -67,14 +77,11 @@ export function LotTableView({
                     onChange={(event) => onSelection(key, event.currentTarget.checked)}
                   />
                 </td>
-                <td>{lot.symbol}</td>
-                <td class="numeric-cell">{lot.vestDate}</td>
-                <td>{lot.grantNumber}</td>
-                <td>{lot.vestPeriod}</td>
-                <td class="numeric-cell">{lot.quantity.toFixed()}</td>
-                <td class="numeric-cell">{formatUsd(lot.estimatedCostBasisPerShare)}</td>
-                <td class="numeric-cell">{result === null ? "—" : formatUsd(result.value)}</td>
-                <td class="numeric-cell">{result === null ? "—" : formatUsd(result.gain)}</td>
+                {columns.map((column) => (
+                  <td key={column.label} class={cellClass(column)}>
+                    {column.text(lot, valued)}
+                  </td>
+                ))}
               </tr>
             );
           })}
