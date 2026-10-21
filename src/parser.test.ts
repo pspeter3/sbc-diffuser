@@ -120,19 +120,17 @@ describe("RSU parser", () => {
     ]);
   });
   it.each([
-    ["0", "10.125", "10.125"],
-    ["5.25", "10.125", "5.25"],
-    ["0", "0", "0"],
-    ["0", null, "0"],
-    ["0", "", "0"],
+    ["0", "10.125", ["10.125"]],
+    ["5.25", "10.125", ["5.25"]],
+    ["0", "0", []],
+    ["0", null, []],
+    ["0", "", []],
   ])("resolves held quantity from sellable %s and blocked %s", (sellable, blocked, held) => {
     const input = changed(3, 30, blocked);
     const cells = input[0]?.data[3];
     if (cells === undefined) throw new Error("Missing fixture row");
     cells[32] = sellable;
-    const lot = parseRsuLotList(input)[0];
-    if (lot === undefined) throw new Error("Missing parsed lot");
-    expect(lot.quantity.toString()).toBe(held);
+    expect(parseRsuLotList(input).map((lot) => lot.quantity.toString())).toEqual(held);
   });
   it.each([-1, "junk", "Infinity"])("rejects invalid blocked quantity %s", (value) => {
     expect(() => parseRsuLotList(changed(3, 30, value))).toThrow();
@@ -148,7 +146,7 @@ describe("RSU parser", () => {
     for (const sheet of input) sheet.data[0]?.splice(61);
     expect(parseRsuLotList(input)).toEqual(parseRsuLotList(workbook()));
   });
-  it.each([0, "0", "1e2", ".5"])("accepts decimal %s", (value) => {
+  it.each([7, "7", "1e2", ".5"])("accepts decimal %s", (value) => {
     expect(parseRsuLotList(changed(3, 32, value))[0]?.quantity.toString()).toBe(
       new BigNumber(value).toString(),
     );

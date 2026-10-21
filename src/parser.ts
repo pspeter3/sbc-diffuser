@@ -133,15 +133,17 @@ const parser = z.pipe(
         }
         continue;
       }
+      const quantity = result.data.sellableQuantity.isGreaterThan(0)
+        ? result.data.sellableQuantity
+        : result.data.blockedShareQuantity;
+      if (quantity === null || quantity.isZero()) continue;
       lots.push({
         grantNumber: result.data.grantNumber,
         vestPeriod: result.data.vestPeriod,
         symbol: result.data.symbol,
         vestDate: result.data.vestDate,
         estimatedCostBasisPerShare: result.data.estimatedCostBasisPerShare,
-        quantity: result.data.sellableQuantity.isGreaterThan(0)
-          ? result.data.sellableQuantity
-          : (result.data.blockedShareQuantity ?? result.data.sellableQuantity),
+        quantity,
       });
     }
     return lots;
@@ -150,7 +152,8 @@ const parser = z.pipe(
 
 /**
  * Accepts decoded worksheets: [{ sheet: "Restricted Stock", data: [headers, ...rows] }].
- * Returns only Sellable Shares records, in source order, counting blocked shares as held.
+ * Returns held Sellable Shares records in source order, counting blocked shares as held
+ * and skipping records without any held shares.
  * Throws a Zod error for invalid input.
  * Issue paths identify the worksheet, one-based row, and field or column.
  */
