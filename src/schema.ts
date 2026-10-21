@@ -7,13 +7,12 @@ export type GrantNumber = Brand<string, "GrantNumber">;
 export type VestPeriod = Brand<string, "VestPeriod">;
 export type IsoDate = Brand<string, "IsoDate">;
 
-/** One current holding; blocked holdings are retained without changing quantities. */
+/** One current holding; blocked status is ignored because plans target a future trading window. */
 export interface RsuLot {
   readonly grantNumber: GrantNumber;
   readonly vestPeriod: VestPeriod;
   readonly symbol: string;
   readonly vestDate: IsoDate;
-  readonly blocked: boolean;
   /** Positive sellable quantity, otherwise blocked quantity; never their sum. */
   readonly quantity: Readonly<BigNumber>;
   readonly estimatedCostBasisPerShare: Readonly<BigNumber>;

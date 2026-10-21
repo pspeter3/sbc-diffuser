@@ -139,7 +139,6 @@ const parser = z.pipe(
         vestPeriod: result.data.vestPeriod,
         symbol: result.data.symbol,
         vestDate: result.data.vestDate,
-        blocked: !result.data.sellableQuantity.isGreaterThan(0),
         estimatedCostBasisPerShare: result.data.estimatedCostBasisPerShare,
         quantity: result.data.sellableQuantity.isGreaterThan(0)
           ? result.data.sellableQuantity
@@ -152,7 +151,7 @@ const parser = z.pipe(
 
 /**
  * Accepts decoded worksheets: [{ sheet: "Restricted Stock", data: [headers, ...rows] }].
- * Returns only Sellable Shares records, in source order, including blocked lots.
+ * Returns only Sellable Shares records, in source order, counting blocked shares as held.
  * Throws a Zod error for invalid input.
  * Issue paths identify the worksheet, one-based row, and field or column.
  */

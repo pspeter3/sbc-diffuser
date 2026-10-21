@@ -44,7 +44,7 @@ it("sorts lots while preserving their identity and focus across renders", (): vo
     lot("AAA", "2026-02-01"),
     lot("AAA", "2026-01-01", "10", "10", "2"),
     lot("AAA", "2026-01-01", "10", "10", "1", "10"),
-    { ...lot("<script>", "2026-01-01", "10", "10", "1", "2"), blocked: true },
+    lot("<script>", "2026-01-01", "10", "10", "1", "2"),
     lot("AAA", "2026-01-01", "30"),
   ];
   const onSelection = vi.fn();

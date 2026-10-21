@@ -18,7 +18,6 @@ export function lot(
     vestPeriod: z.custom<RsuLot["vestPeriod"]>((v) => typeof v === "string").parse(period),
     estimatedCostBasisPerShare: new BigNumber(basis),
     quantity: new BigNumber(quantity),
-    blocked: false,
   };
 }
 export function parameters(target = "50", wealth = "0"): Parameters {

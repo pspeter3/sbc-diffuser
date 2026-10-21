@@ -54,7 +54,7 @@ function changed(row: number, column: number, value: unknown): ReturnType<typeof
 }
 
 describe("RSU parser", () => {
-  it("returns only current lots, retains blocked lots and exact decimals", () => {
+  it("returns only current lots with exact decimals", () => {
     const lots = parseRsuLotList(workbook());
     expect(lots).toHaveLength(1);
     expect(lots[0]).toEqual({
@@ -62,7 +62,6 @@ describe("RSU parser", () => {
       vestPeriod: "1",
       symbol: "EXAMPLE",
       vestDate: "2025-09-20",
-      blocked: false,
       quantity: new BigNumber("10.125"),
       estimatedCostBasisPerShare: new BigNumber("12.34567890123456789"),
     });
@@ -91,7 +90,6 @@ describe("RSU parser", () => {
         vestPeriod: "2",
         symbol: "BBB",
         vestDate: "2026-04-01",
-        blocked: false,
         quantity: new BigNumber(3),
         estimatedCostBasisPerShare: new BigNumber(40),
       },
@@ -100,7 +98,6 @@ describe("RSU parser", () => {
         vestPeriod: "1",
         symbol: "AAA",
         vestDate: "2026-01-01",
-        blocked: false,
         quantity: new BigNumber(2),
         estimatedCostBasisPerShare: new BigNumber(10),
       },
@@ -109,7 +106,6 @@ describe("RSU parser", () => {
         vestPeriod: "2",
         symbol: "AAA",
         vestDate: "2026-02-01",
-        blocked: false,
         quantity: new BigNumber(4),
         estimatedCostBasisPerShare: new BigNumber(20),
       },
@@ -118,31 +114,26 @@ describe("RSU parser", () => {
         vestPeriod: "1",
         symbol: "BBB",
         vestDate: "2026-03-01",
-        blocked: false,
         quantity: new BigNumber(5),
         estimatedCostBasisPerShare: new BigNumber(30),
       },
     ]);
   });
   it.each([
-    ["0", "10.125", "10.125", true],
-    ["5.25", "10.125", "5.25", false],
-    ["0", "0", "0", true],
-    ["0", null, "0", true],
-    ["0", "", "0", true],
-  ])(
-    "resolves held quantity from sellable %s and blocked %s",
-    (sellable, blocked, held, isBlocked) => {
-      const input = changed(3, 30, blocked);
-      const cells = input[0]?.data[3];
-      if (cells === undefined) throw new Error("Missing fixture row");
-      cells[32] = sellable;
-      const lot = parseRsuLotList(input)[0];
-      if (lot === undefined) throw new Error("Missing parsed lot");
-      expect(lot.quantity.toString()).toBe(held);
-      expect(lot.blocked).toBe(isBlocked);
-    },
-  );
+    ["0", "10.125", "10.125"],
+    ["5.25", "10.125", "5.25"],
+    ["0", "0", "0"],
+    ["0", null, "0"],
+    ["0", "", "0"],
+  ])("resolves held quantity from sellable %s and blocked %s", (sellable, blocked, held) => {
+    const input = changed(3, 30, blocked);
+    const cells = input[0]?.data[3];
+    if (cells === undefined) throw new Error("Missing fixture row");
+    cells[32] = sellable;
+    const lot = parseRsuLotList(input)[0];
+    if (lot === undefined) throw new Error("Missing parsed lot");
+    expect(lot.quantity.toString()).toBe(held);
+  });
   it.each([-1, "junk", "Infinity"])("rejects invalid blocked quantity %s", (value) => {
     expect(() => parseRsuLotList(changed(3, 30, value))).toThrow();
   });
