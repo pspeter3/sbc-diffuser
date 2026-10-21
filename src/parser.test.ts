@@ -1,53 +1,30 @@
 import { BigNumber } from "bignumber.js";
 import { describe, expect, it } from "vite-plus/test";
 
+import { row, workbook, type Worksheet } from "../tests/workbook.ts";
 import { parseRsuLotList } from "./parser.ts";
 
-function row(values: Record<number, unknown>): unknown[] {
-  const cells: unknown[] = Array(63).fill(null);
-  for (const [index, value] of Object.entries(values)) cells[Number(index)] = value;
-  return cells;
+function fixture(): Worksheet[] {
+  return workbook([
+    row({ 0: "Grant", 1: "EXAMPLE", 11: "G1" }),
+    row({ 0: "Vest Schedule", 11: "G1", 18: 1, 19: "20-Sep-2025" }),
+    row({
+      0: "Sellable Shares",
+      11: "G1",
+      18: "1",
+      32: "10.125",
+      35: "12.34567890123456789",
+      59: "Yes",
+      61: "9/22/2025",
+    }),
+    row({ 0: "Totals" }),
+  ]);
 }
 
-function workbook(): { sheet: string; data: unknown[][] }[] {
-  const headers: unknown[] = Array(63).fill(null);
-  for (const [index, name] of [
-    [0, "Record Type"],
-    [1, "Symbol"],
-    [11, "Grant Number"],
-    [18, "Vest Period"],
-    [19, "Vest Date"],
-    [30, "Blocked Share Qty."],
-    [32, "Sellable Qty."],
-    [35, "Est. Cost Basis (per share):"],
-    [61, "Release Date"],
-  ] as const)
-    headers[index] = name;
-  return [
-    {
-      sheet: "Restricted Stock",
-      data: [
-        headers,
-        row({ 0: "Grant", 1: "EXAMPLE", 11: "G1" }),
-        row({ 0: "Vest Schedule", 11: "G1", 18: 1, 19: "20-Sep-2025" }),
-        row({
-          0: "Sellable Shares",
-          11: "G1",
-          18: "1",
-          32: "10.125",
-          35: "12.34567890123456789",
-          59: "Yes",
-          61: "9/22/2025",
-        }),
-        row({ 0: "Totals" }),
-      ],
-    },
-  ];
-}
-
-function changed(row: number, column: number, value: unknown): ReturnType<typeof workbook> {
-  const sheets = workbook();
-  const cells = sheets[0]?.data[row];
+function changed(index: number, column: number, value: unknown): Worksheet[] {
+  const sheets = fixture();
+  // Widened so tests can inject values a real decoder never produces.
+  const cells: unknown[] | undefined = sheets[0]?.data[index];
   if (cells === undefined) throw new Error("Invalid fixture row");
   cells[column] = value;
   return sheets;
@@ -55,7 +32,7 @@ function changed(row: number, column: number, value: unknown): ReturnType<typeof
 
 describe("RSU parser", () => {
   it("returns only current lots with exact decimals", () => {
-    const lots = parseRsuLotList(workbook());
+    const lots = parseRsuLotList(fixture());
     expect(lots).toHaveLength(1);
     expect(lots[0]).toEqual({
       grantNumber: "G1",
@@ -67,7 +44,7 @@ describe("RSU parser", () => {
     });
   });
   it("joins grants and vest periods independently of record order", () => {
-    const input = workbook();
+    const input = fixture();
     const sheet = input[0];
     if (sheet === undefined) throw new Error("Missing fixture sheet");
     sheet.data.splice(
@@ -144,7 +121,7 @@ describe("RSU parser", () => {
   it("ignores unused release date fields and headers", () => {
     const input = changed(3, 61, "not a date");
     for (const sheet of input) sheet.data[0]?.splice(61);
-    expect(parseRsuLotList(input)).toEqual(parseRsuLotList(workbook()));
+    expect(parseRsuLotList(input)).toEqual(parseRsuLotList(fixture()));
   });
   it.each([7, "7", "1e2", ".5"])("accepts decimal %s", (value) => {
     expect(parseRsuLotList(changed(3, 32, value))[0]?.quantity.toString()).toBe(
@@ -193,7 +170,7 @@ describe("RSU parser", () => {
     expect(parseRsuLotList(input)).toEqual([]);
   });
   it("rejects a repeated grant and vest period", () => {
-    const input = workbook();
+    const input = fixture();
     const sheet = input[0];
     const holding = sheet?.data[3];
     if (holding === undefined) throw new Error("Missing fixture row");

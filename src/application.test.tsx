@@ -2,7 +2,7 @@ import { fireEvent, render, screen, within } from "@testing-library/preact";
 import readXlsxFile from "read-excel-file/browser";
 import { expect, it, vi } from "vite-plus/test";
 
-import { workbook } from "../tests/workbook.ts";
+import { holding, workbook } from "../tests/workbook.ts";
 import { Application } from "./application.tsx";
 
 vi.mock("read-excel-file/browser", () => ({ default: vi.fn() }));
@@ -71,18 +71,9 @@ it("imports, configures, selects manually, and replaces selections on submission
 });
 
 it("only asks for prices for symbols with held lots", async (): Promise<void> => {
-  const data = workbook();
-  const excluded = workbook().flatMap((sheet) =>
-    sheet.data.slice(1).map((row) => {
-      const next = [...row];
-      next[1] = "EMPTY";
-      next[11] = "empty-grant";
-      next[32] = "0";
-      return next;
-    }),
+  vi.mocked(readXlsxFile).mockResolvedValue(
+    workbook([...holding(), ...holding({ symbol: "EMPTY", grant: "empty-grant", sellable: "0" })]),
   );
-  for (const sheet of data) sheet.data.push(...excluded);
-  vi.mocked(readXlsxFile).mockResolvedValue(data);
   render(<Application />);
   fireEvent.change(screen.getByLabelText("Workbook (.xlsx)"), {
     target: { files: [new File([], "lots.xlsx")] },
@@ -93,13 +84,11 @@ it("only asks for prices for symbols with held lots", async (): Promise<void> =>
   expect(screen.getAllByRole("checkbox")).toHaveLength(1);
 });
 
-it.each(["empty", "zero-quantity"])("supports a %s workbook", async (kind): Promise<void> => {
-  const data = workbook();
-  for (const sheet of data) {
-    if (kind === "empty") sheet.data.splice(1);
-    else for (const row of sheet.data.slice(1)) row[32] = "0";
-  }
-  vi.mocked(readXlsxFile).mockResolvedValue(data);
+it.each([
+  ["empty", []],
+  ["zero-quantity", holding({ sellable: "0" })],
+])("supports a %s workbook", async (_, rows): Promise<void> => {
+  vi.mocked(readXlsxFile).mockResolvedValue(workbook(rows));
   render(<Application />);
   fireEvent.change(screen.getByLabelText("Workbook (.xlsx)"), {
     target: { files: [new File([], "empty.xlsx")] },
