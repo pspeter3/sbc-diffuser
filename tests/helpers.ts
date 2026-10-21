@@ -1,8 +1,8 @@
 import { BigNumber } from "bignumber.js";
-import * as z from "zod/mini";
 
 import { type Parameters } from "../src/planner.ts";
-import { type RsuLot } from "../src/schema.ts";
+import { grantNumberSchema, isoDateSchema, type RsuLot, vestPeriodSchema } from "../src/schema.ts";
+
 export function lot(
   symbol = "AAA",
   date = "2026-01-01",
@@ -13,9 +13,9 @@ export function lot(
 ): RsuLot {
   return {
     symbol,
-    vestDate: z.custom<RsuLot["vestDate"]>((v) => z.iso.date().safeParse(v).success).parse(date),
-    grantNumber: z.custom<RsuLot["grantNumber"]>((v) => typeof v === "string").parse(grant),
-    vestPeriod: z.custom<RsuLot["vestPeriod"]>((v) => typeof v === "string").parse(period),
+    vestDate: isoDateSchema.parse(date),
+    grantNumber: grantNumberSchema.parse(grant),
+    vestPeriod: vestPeriodSchema.parse(period),
     estimatedCostBasisPerShare: new BigNumber(basis),
     quantity: new BigNumber(quantity),
   };

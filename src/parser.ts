@@ -2,20 +2,12 @@ import { BigNumber } from "bignumber.js";
 import * as z from "zod/mini";
 
 import {
-  type GrantNumber,
-  type IsoDate,
+  grantNumberSchema,
+  isoDateSchema,
   type RsuLot,
   type RsuLotList,
-  type VestPeriod,
+  vestPeriodSchema,
 } from "./schema.ts";
-
-const grantNumberSchema = z.custom<GrantNumber>(
-  (value) => typeof value === "string" && value.length > 0,
-);
-const vestPeriodSchema = z.custom<VestPeriod>(
-  (value) => typeof value === "string" && value.length > 0,
-);
-const isoDateSchema = z.custom<IsoDate>((value) => z.iso.date().safeParse(value).success);
 const amountSchema = z
   .instanceof(BigNumber)
   .check(z.refine((value) => value.isFinite() && !value.isNegative()));
