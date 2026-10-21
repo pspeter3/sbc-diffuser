@@ -24,16 +24,16 @@ const rsuLotSchema = z.object({
 
 const sheetName = "Restricted Stock";
 // Repeated column labels make their positions significant in this export.
-const columns = new Map<number, string>([
-  [0, "Record Type"],
-  [1, "Symbol"],
-  [11, "Grant Number"],
-  [18, "Vest Period"],
-  [19, "Vest Date"],
-  [30, "Blocked Share Qty."],
-  [32, "Sellable Qty."],
-  [35, "Est. Cost Basis (per share):"],
-]);
+const columns = {
+  recordType: { index: 0, label: "Record Type" },
+  symbol: { index: 1, label: "Symbol" },
+  grantNumber: { index: 11, label: "Grant Number" },
+  vestPeriod: { index: 18, label: "Vest Period" },
+  vestDate: { index: 19, label: "Vest Date" },
+  blockedQuantity: { index: 30, label: "Blocked Share Qty." },
+  sellableQuantity: { index: 32, label: "Sellable Qty." },
+  costBasis: { index: 35, label: "Est. Cost Basis (per share):" },
+} as const;
 
 const inputSchema = z.array(z.object({ sheet: z.string(), data: z.array(z.array(z.unknown())) }));
 
@@ -85,38 +85,45 @@ const parser = z.pipe(
       fail(1, "sheet", "Missing Restricted Stock worksheet");
       return [];
     }
-    for (const [index, label] of columns) {
+    for (const { index, label } of Object.values(columns)) {
       if (sheet.data[0]?.[index] !== label) fail(1, index, `Expected column ${label}`);
     }
     if (issues.length > 0) return [];
 
-    const rows = sheet.data.slice(1).map((cells, index) => ({ cells, row: index + 2 }));
+    const rows = sheet.data.slice(1).map((cells, index) => ({
+      row: index + 2,
+      cell: (column: keyof typeof columns): unknown => cells[columns[column].index],
+    }));
+    const grants = new Map<unknown, (typeof rows)[number]>();
+    const vests = new Map<string, (typeof rows)[number]>();
+    const holdings: typeof rows = [];
+    for (const entry of rows) {
+      const grantNumber = text(entry.cell("grantNumber"));
+      const recordType = entry.cell("recordType");
+      if (recordType === "Grant") grants.set(grantNumber, entry);
+      else if (recordType === "Vest Schedule")
+        vests.set(JSON.stringify([grantNumber, period(entry.cell("vestPeriod"))]), entry);
+      else if (recordType === "Sellable Shares") holdings.push(entry);
+    }
+
     const lots: RsuLot[] = [];
-    for (const { cells, row } of rows) {
-      if (cells[0] !== "Sellable Shares") continue;
-      const grantNumber = text(cells[11]);
-      const vestPeriod = period(cells[18]);
-      const grant = rows.find(
-        (entry) => entry.cells[0] === "Grant" && text(entry.cells[11]) === grantNumber,
-      );
-      const vest = rows.find(
-        (entry) =>
-          entry.cells[0] === "Vest Schedule" &&
-          text(entry.cells[11]) === grantNumber &&
-          period(entry.cells[18]) === vestPeriod,
-      );
+    for (const { cell, row } of holdings) {
+      const grantNumber = text(cell("grantNumber"));
+      const vestPeriod = period(cell("vestPeriod"));
+      const grant = grants.get(grantNumber);
+      const vest = vests.get(JSON.stringify([grantNumber, vestPeriod]));
       if (grant === undefined) fail(row, "grantNumber", "Missing matching grant");
       if (vest === undefined) fail(row, "vestPeriod", "Missing matching vest schedule");
       if (grant === undefined || vest === undefined) continue;
+      const blocked = cell("blockedQuantity");
       const result = rsuLotSchema.safeParse({
         grantNumber,
         vestPeriod,
-        symbol: text(grant.cells[1]),
-        vestDate: date(vest.cells[19]),
-        sellableQuantity: decimal(cells[32]),
-        blockedShareQuantity:
-          cells[30] == null || text(cells[30]) === "" ? null : decimal(cells[30]),
-        estimatedCostBasisPerShare: decimal(cells[35]),
+        symbol: text(grant.cell("symbol")),
+        vestDate: date(vest.cell("vestDate")),
+        sellableQuantity: decimal(cell("sellableQuantity")),
+        blockedShareQuantity: blocked == null || text(blocked) === "" ? null : decimal(blocked),
+        estimatedCostBasisPerShare: decimal(cell("costBasis")),
       });
       if (!result.success) {
         for (const issue of result.error.issues) {
