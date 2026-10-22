@@ -3,7 +3,7 @@ import { useMemo, useState } from "preact/hooks";
 
 import { LotTableView } from "./lot-table-view.tsx";
 import { PlannerFormView } from "./planner-form-view.tsx";
-import { type Parameters, recommend, summarize } from "./planner.ts";
+import { availableLots, type Parameters, recommend, summarize } from "./planner.ts";
 import { type RsuLotList } from "./schema.ts";
 import { PortfolioSummary, SaleSummary } from "./summary-view.tsx";
 
@@ -38,6 +38,10 @@ export function Planner({ lots }: { lots: RsuLotList }): JSX.Element {
   // Mirrors the user's toggles so a new recommendation can reopen closed results.
   const [expanded, setExpanded] = useState<ReadonlySet<Section>>(new Set(["Configuration"]));
   const summary = parameters === null ? null : summarize(lots, parameters, selected);
+  const available = useMemo(
+    () => (parameters === null ? lots : availableLots(lots, parameters.saleDate)),
+    [lots, parameters],
+  );
   const toggle = (title: Section, open: boolean): void => {
     setExpanded((previous) => {
       if (previous.has(title) === open) return previous;
@@ -71,7 +75,7 @@ export function Planner({ lots }: { lots: RsuLotList }): JSX.Element {
       )}
       <Disclosure title="Lots" expanded={expanded} onToggle={toggle}>
         <LotTableView
-          lots={lots}
+          lots={available}
           prices={parameters?.prices ?? null}
           selected={selected}
           onSelection={(key, checked) => {

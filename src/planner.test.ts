@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 
 import { lot, parameters } from "../tests/helpers.ts";
-import { priceFor, recommend, summarize } from "./planner.ts";
+import { availableLots, priceFor, recommend, summarize } from "./planner.ts";
 import { lotKey, type RsuLot } from "./schema.ts";
 
 function keys(...lots: RsuLot[]): Set<string> {
@@ -39,5 +39,18 @@ describe("planning", (): void => {
     expect(summarize([], parameters(), new Set()).finalConcentration.toFixed()).toBe("0");
     expect(summarize([], parameters(), new Set()).currentConcentration.toFixed()).toBe("0");
     expect(recommend(lots, parameters("50", "10000")).size).toBe(0);
+  });
+  it("only holds and sells lots vested by the sale date", (): void => {
+    const vested = lot({ vestDate: "2026-01-01", basis: "30" });
+    const onSaleDate = lot({ vestDate: "2026-03-01", basis: "20" });
+    const unvested = lot({ vestDate: "2026-03-02", basis: "0" });
+    const lots = [vested, onSaleDate, unvested];
+    const configured = parameters("0", "0", "2026-03-01");
+    expect(availableLots(lots, configured.saleDate)).toEqual([vested, onSaleDate]);
+    expect(recommend(lots, configured)).toEqual(keys(vested, onSaleDate));
+    const summary = summarize(lots, configured, keys(onSaleDate, unvested));
+    expect(summary.portfolio.total.lots).toBe(2);
+    expect(summary.sale.total.lots).toBe(1);
+    expect(summary.finalConcentration.toFixed()).toBe("50");
   });
 });

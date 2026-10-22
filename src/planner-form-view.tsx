@@ -4,6 +4,7 @@ import { useId } from "preact/hooks";
 import * as z from "zod/mini";
 
 import { type Parameters } from "./planner.ts";
+import { type IsoDate, isoDateSchema } from "./schema.ts";
 
 /** Plain non-negative decimals; rejects signs, exponents, and non-finite values. */
 function decimal(
@@ -31,7 +32,18 @@ const parametersSchema = z.object({
   ),
   wealth: decimal("Enter a valid value."),
   target: decimal("Enter a percentage from 0 to 100.", (value) => value.lte(100)),
+  saleDate: z.custom<IsoDate>(
+    (value) => isoDateSchema.safeParse(value).success,
+    "Enter a valid sale date.",
+  ),
 });
+
+/** Today's local calendar date, matching what a date input shows. */
+function today(): string {
+  const now = new Date();
+  const pad = (value: number): string => String(value).padStart(2, "0");
+  return `${String(now.getFullYear())}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
 
 export function PlannerFormView({
   symbols,
@@ -49,6 +61,7 @@ export function PlannerFormView({
       prices: new Map(symbols.map((symbol) => [symbol, values.get(`prices.${symbol}`)])),
       wealth: values.get("wealth"),
       target: values.get("target"),
+      saleDate: values.get("saleDate"),
     });
     const issues = new Map(
       result.error?.issues.map((issue) => [issue.path.join("."), issue.message]),
@@ -107,6 +120,17 @@ export function PlannerFormView({
         aria-describedby="target-helper"
       />
       <small id="target-helper">Desired wealth concentration (%)</small>
+      <label htmlFor="saleDate">Sale date</label>
+      <input
+        onInput={clearValidity}
+        id="saleDate"
+        name="saleDate"
+        type="date"
+        defaultValue={today()}
+        required
+        aria-describedby="saleDate-helper"
+      />
+      <small id="saleDate-helper">Only lots vested by this date are available</small>
       <button type="submit">Recommend</button>
     </form>
   );

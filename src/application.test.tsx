@@ -18,11 +18,17 @@ async function importWorkbook(rows = holding()): Promise<void> {
   await screen.findByLabelText("Wealth");
 }
 
-function configure({ price = "40", wealth = "0", target = "50" } = {}): void {
+function configure({
+  price = "40",
+  wealth = "0",
+  target = "50",
+  saleDate = "2026-12-01",
+} = {}): void {
   const input = screen.queryByLabelText(/^TEST/);
   if (input !== null) fireEvent.input(input, { target: { value: price } });
   fireEvent.input(screen.getByLabelText("Wealth"), { target: { value: wealth } });
   fireEvent.input(screen.getByLabelText("Concentration"), { target: { value: target } });
+  fireEvent.input(screen.getByLabelText("Sale date"), { target: { value: saleDate } });
   fireEvent.click(screen.getByRole("button", { name: "Recommend" }));
 }
 
@@ -113,6 +119,20 @@ it("keeps manual disclosure until the next recommendation", async (): Promise<vo
   configure();
   expect(sections()).toEqual({ Configuration: false, Portfolio: true, Sale: true, Lots: true });
   expect(lotCheckbox().checked).toBe(true);
+});
+
+it("only offers lots vested by the sale date", async (): Promise<void> => {
+  await importWorkbook([
+    ...holding(),
+    ...holding({ grant: "grant-2", vestDate: "2027-03-01", basis: "0" }),
+  ]);
+  expect(screen.getAllByRole("checkbox")).toHaveLength(2);
+  configure({ target: "0" });
+  expect(lotCheckbox().checked).toBe(true);
+  expect(saleTotal()).toMatchObject({ Lots: "1", Proceeds: "$400.00" });
+  configure({ target: "0", saleDate: "2027-03-01" });
+  expect(screen.getAllByRole("checkbox")).toHaveLength(2);
+  expect(saleTotal()).toMatchObject({ Lots: "2", Proceeds: "$800.00" });
 });
 
 it("only asks for prices for symbols with held lots", async (): Promise<void> => {

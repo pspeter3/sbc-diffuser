@@ -1,11 +1,18 @@
 import { BigNumber } from "bignumber.js";
 
-import { lotKey, type RsuLot, type RsuLotList } from "./schema.ts";
+import { type IsoDate, lotKey, type RsuLot, type RsuLotList } from "./schema.ts";
 
 export interface Parameters {
   prices: ReadonlyMap<string, BigNumber>;
   wealth: BigNumber;
   target: BigNumber;
+  /** Only lots vesting on or before this date can be held or sold. */
+  saleDate: IsoDate;
+}
+
+/** Lots vested by the sale date; ISO dates compare chronologically as strings. */
+export function availableLots(lots: RsuLotList, saleDate: IsoDate): RsuLotList {
+  return lots.filter((lot) => lot.vestDate <= saleDate);
 }
 
 export function priceFor(parameters: Parameters, symbol: string): BigNumber {
@@ -68,7 +75,7 @@ function breakdown(lots: RsuLotList, parameters: Parameters): Breakdown {
 }
 
 export interface Summary {
-  /** Every held lot. */
+  /** Every lot held by the sale date. */
   portfolio: Breakdown;
   /** Selected lots; value is sale proceeds. */
   sale: Breakdown;
@@ -89,9 +96,10 @@ export function summarize(
   parameters: Parameters,
   selected: ReadonlySet<string>,
 ): Summary {
-  const portfolio = breakdown(lots, parameters);
+  const available = availableLots(lots, parameters.saleDate);
+  const portfolio = breakdown(available, parameters);
   const sale = breakdown(
-    lots.filter((lot) => selected.has(lotKey(lot))),
+    available.filter((lot) => selected.has(lotKey(lot))),
     parameters,
   );
   const held = portfolio.total.value;
@@ -108,7 +116,7 @@ export function summarize(
 
 export function recommend(lots: RsuLotList, parameters: Parameters): Set<string> {
   const groups = new Map<string, RsuLot[]>();
-  for (const lot of lots) {
+  for (const lot of availableLots(lots, parameters.saleDate)) {
     const group = groups.get(lot.vestDate) ?? [];
     group.push(lot);
     groups.set(lot.vestDate, group);

@@ -46,6 +46,7 @@ it.each([
   ["Wealth", "1e2"],
   ["Wealth", "1.2.3"],
   ["Concentration", "100.01"],
+  ["Sale date", ""],
 ])("rejects %s of %j", (label, value): void => {
   const onSubmit = vi.fn();
   render(<PlannerFormView symbols={["AAA"]} onSubmit={onSubmit} />);
@@ -58,7 +59,13 @@ it.each([
 it("submits exact parameters at the boundaries", (): void => {
   const onSubmit = vi.fn();
   render(<PlannerFormView symbols={["AAA", "BRK B"]} onSubmit={onSubmit} />);
-  fill({ AAA: "0.01", "BRK B": "40", Wealth: "0", Concentration: "100" });
+  fill({
+    AAA: "0.01",
+    "BRK B": "40",
+    Wealth: "0",
+    Concentration: "100",
+    "Sale date": "2026-12-15",
+  });
   submit();
   expect(onSubmit).toHaveBeenCalledWith({
     prices: new Map([
@@ -67,5 +74,16 @@ it("submits exact parameters at the boundaries", (): void => {
     ]),
     wealth: new BigNumber(0),
     target: new BigNumber(100),
+    saleDate: "2026-12-15",
   });
+});
+
+it("defaults the sale date to today", (): void => {
+  vi.useFakeTimers({ now: new Date(2026, 0, 5, 23, 30), toFake: ["Date"] });
+  try {
+    render(<PlannerFormView symbols={[]} onSubmit={vi.fn()} />);
+    expect(screen.getByLabelText<HTMLInputElement>("Sale date").value).toBe("2026-01-05");
+  } finally {
+    vi.useRealTimers();
+  }
 });

@@ -31,7 +31,7 @@ export function lot({
   };
 }
 
-export function parameters(target = "50", wealth = "0"): Parameters {
+export function parameters(target = "50", wealth = "0", saleDate = "2099-12-31"): Parameters {
   return {
     prices: new Map([
       ["AAA", new BigNumber(20)],
@@ -39,5 +39,6 @@ export function parameters(target = "50", wealth = "0"): Parameters {
     ]),
     wealth: new BigNumber(wealth),
     target: new BigNumber(target),
+    saleDate: isoDateSchema.parse(saleDate),
   };
 }
