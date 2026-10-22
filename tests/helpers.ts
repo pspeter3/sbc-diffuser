@@ -1,26 +1,36 @@
 import { BigNumber } from "bignumber.js";
-import * as z from "zod/mini";
 
 import { type Parameters } from "../src/planner.ts";
-import { type RsuLot } from "../src/schema.ts";
-export function lot(
+import { grantNumberSchema, isoDateSchema, type RsuLot, vestPeriodSchema } from "../src/schema.ts";
+
+let sequence = 0;
+
+/** Builds a lot; each call gets its own vest period unless one is given. */
+export function lot({
   symbol = "AAA",
-  date = "2026-01-01",
+  vestDate = "2026-01-01",
   basis = "10",
   quantity = "10",
   grant = "1",
-  period = "1",
-): RsuLot {
+  period = `auto-${String((sequence += 1))}`,
+}: {
+  symbol?: string;
+  vestDate?: string;
+  basis?: string;
+  quantity?: string;
+  grant?: string;
+  period?: string;
+} = {}): RsuLot {
   return {
     symbol,
-    vestDate: z.custom<RsuLot["vestDate"]>((v) => z.iso.date().safeParse(v).success).parse(date),
-    grantNumber: z.custom<RsuLot["grantNumber"]>((v) => typeof v === "string").parse(grant),
-    vestPeriod: z.custom<RsuLot["vestPeriod"]>((v) => typeof v === "string").parse(period),
+    vestDate: isoDateSchema.parse(vestDate),
+    grantNumber: grantNumberSchema.parse(grant),
+    vestPeriod: vestPeriodSchema.parse(period),
     estimatedCostBasisPerShare: new BigNumber(basis),
     quantity: new BigNumber(quantity),
-    blocked: false,
   };
 }
+
 export function parameters(target = "50", wealth = "0"): Parameters {
   return {
     prices: new Map([

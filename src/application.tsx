@@ -13,15 +13,7 @@ export function Application(): JSX.Element {
         <h1>SBC Diffuser</h1>
       </header>
       <main>
-        {lots === null ? (
-          <WorkbookFormView
-            onParseRsuLotList={(imported) => {
-              setLots(imported.filter((lot) => lot.quantity.gt(0)));
-            }}
-          />
-        ) : (
-          <Planner lots={lots} />
-        )}
+        {lots === null ? <WorkbookFormView onParseRsuLotList={setLots} /> : <Planner lots={lots} />}
       </main>
     </>
   );

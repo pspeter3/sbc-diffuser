@@ -1,60 +1,89 @@
-import { type JSX } from "preact";
-import { useMemo, useRef, useState } from "preact/hooks";
+import { type ComponentChildren, type JSX } from "preact";
+import { useMemo, useState } from "preact/hooks";
 
 import { LotTableView } from "./lot-table-view.tsx";
 import { PlannerFormView } from "./planner-form-view.tsx";
 import { type Parameters, recommend, summarize } from "./planner.ts";
 import { type RsuLotList } from "./schema.ts";
-import { SummaryView } from "./summary-view.tsx";
+import { PortfolioSummary, SaleSummary } from "./summary-view.tsx";
+
+type Section = "Configuration" | "Portfolio" | "Sale" | "Lots";
+
+function Disclosure({
+  title,
+  expanded,
+  onToggle,
+  children,
+}: {
+  title: Section;
+  expanded: ReadonlySet<Section>;
+  onToggle: (title: Section, open: boolean) => void;
+  children: ComponentChildren;
+}): JSX.Element {
+  return (
+    <details
+      open={expanded.has(title)}
+      onToggle={(event) => onToggle(title, event.currentTarget.open)}
+    >
+      <summary>{title}</summary>
+      {children}
+    </details>
+  );
+}
 
 export function Planner({ lots }: { lots: RsuLotList }): JSX.Element {
   const symbols = useMemo(() => [...new Set(lots.map((lot) => lot.symbol))].sort(), [lots]);
   const [parameters, setParameters] = useState<Parameters | null>(null);
-  const [selected, setSelected] = useState<ReadonlySet<number>>(new Set());
-  const section = useRef<HTMLElement>(null);
-  const configuration = useRef<HTMLDetailsElement>(null);
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  // Mirrors the user's toggles so a new recommendation can reopen closed results.
+  const [expanded, setExpanded] = useState<ReadonlySet<Section>>(new Set(["Configuration"]));
   const summary = parameters === null ? null : summarize(lots, parameters, selected);
+  const toggle = (title: Section, open: boolean): void => {
+    setExpanded((previous) => {
+      if (previous.has(title) === open) return previous;
+      const next = new Set(previous);
+      if (open) next.add(title);
+      else next.delete(title);
+      return next;
+    });
+  };
   return (
-    <section ref={section}>
-      <details ref={configuration} open>
-        <summary>Configuration</summary>
+    <section>
+      <Disclosure title="Configuration" expanded={expanded} onToggle={toggle}>
         <PlannerFormView
           symbols={symbols}
           onSubmit={(next) => {
             setParameters(next);
             setSelected(recommend(lots, next));
-            // The form can only submit after the section ref has been attached.
-            /* v8 ignore next */
-            section.current?.querySelectorAll(":scope > details").forEach((details) => {
-              details.toggleAttribute("open", details !== configuration.current);
-            });
+            setExpanded(new Set(["Portfolio", "Sale", "Lots"]));
           }}
         />
-      </details>
-      <details>
-        <summary>Portfolio</summary>
-        <SummaryView kind="Portfolio" summary={summary} />
-      </details>
-      <details>
-        <summary>Sale</summary>
-        <SummaryView kind="Sale" summary={summary} />
-      </details>
-      <details>
-        <summary>Lots</summary>
+      </Disclosure>
+      {summary !== null && (
+        <>
+          <Disclosure title="Portfolio" expanded={expanded} onToggle={toggle}>
+            <PortfolioSummary summary={summary} />
+          </Disclosure>
+          <Disclosure title="Sale" expanded={expanded} onToggle={toggle}>
+            <SaleSummary summary={summary} />
+          </Disclosure>
+        </>
+      )}
+      <Disclosure title="Lots" expanded={expanded} onToggle={toggle}>
         <LotTableView
           lots={lots}
           prices={parameters?.prices ?? null}
           selected={selected}
-          onSelection={(index, checked) => {
+          onSelection={(key, checked) => {
             setSelected((previous) => {
               const next = new Set(previous);
-              if (checked) next.add(index);
-              else next.delete(index);
+              if (checked) next.add(key);
+              else next.delete(key);
               return next;
             });
           }}
         />
-      </details>
+      </Disclosure>
     </section>
   );
 }

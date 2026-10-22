@@ -3,15 +3,39 @@ import { type JSX } from "preact";
 import { useMemo } from "preact/hooks";
 
 import { formatUsd } from "./format.ts";
-import { type RsuLot, type RsuLotList } from "./schema.ts";
+import { type Valuation, valuation } from "./planner.ts";
+import { lotKey, type RsuLot, type RsuLotList } from "./schema.ts";
 
-const numericColumns: ReadonlySet<string> = new Set([
-  "Vest",
-  "Shares",
-  "Basis",
-  "Proceeds",
-  "Result",
-]);
+interface Column {
+  label: string;
+  numeric: boolean;
+  /** Valuation is null until prices are configured. */
+  text: (lot: RsuLot, valued: Valuation | null) => string;
+}
+
+const columns: ReadonlyArray<Column> = [
+  { label: "Symbol", numeric: false, text: (lot) => lot.symbol },
+  { label: "Vest", numeric: true, text: (lot) => lot.vestDate },
+  { label: "Grant", numeric: false, text: (lot) => lot.grantNumber },
+  { label: "Period", numeric: false, text: (lot) => lot.vestPeriod },
+  { label: "Shares", numeric: true, text: (lot) => lot.quantity.toFixed() },
+  { label: "Basis", numeric: true, text: (lot) => formatUsd(lot.estimatedCostBasisPerShare) },
+  {
+    label: "Proceeds",
+    numeric: true,
+    text: (_, valued) => (valued === null ? "—" : formatUsd(valued.value)),
+  },
+  {
+    label: "Result",
+    numeric: true,
+    text: (_, valued) => (valued === null ? "—" : formatUsd(valued.gain)),
+  },
+];
+
+function cellClass(column: Column): string | undefined {
+  return column.numeric ? "numeric-cell" : undefined;
+}
+
 export function LotTableView({
   lots,
   prices,
@@ -20,67 +44,44 @@ export function LotTableView({
 }: {
   lots: RsuLotList;
   prices: ReadonlyMap<string, BigNumber> | null;
-  selected: ReadonlySet<number>;
-  onSelection: (index: number, checked: boolean) => void;
+  selected: ReadonlySet<string>;
+  onSelection: (key: string, checked: boolean) => void;
 }): JSX.Element {
-  const sorted = useMemo(
-    () => lots.map((lot, index) => ({ lot, index })).sort((a, b) => compareLots(a.lot, b.lot)),
-    [lots],
-  );
+  const sorted = useMemo(() => lots.toSorted(compareLots), [lots]);
   return (
     <section class="overflow-auto" aria-label="Held RSU lots">
       <table>
         <thead>
           <tr>
-            {[
-              "Sell",
-              "Symbol",
-              "Vest",
-              "Grant",
-              "Period",
-              "Shares",
-              "Basis",
-              "Proceeds",
-              "Result",
-            ].map((label) => (
-              <th
-                key={label}
-                scope="col"
-                class={numericColumns.has(label) ? "numeric-cell" : undefined}
-              >
-                {label}
+            <th scope="col">Sell</th>
+            {columns.map((column) => (
+              <th key={column.label} scope="col" class={cellClass(column)}>
+                {column.label}
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {sorted.map(({ lot, index }) => {
+          {sorted.map((lot) => {
+            const key = lotKey(lot);
             const price = prices?.get(lot.symbol);
+            const valued = price === undefined ? null : valuation(lot, price);
             return (
-              <tr key={index}>
+              <tr key={key}>
                 <td>
                   <input
                     type="checkbox"
                     disabled={prices === null}
-                    checked={selected.has(index)}
+                    checked={selected.has(key)}
                     aria-label={`Plan to sell ${lot.symbol}, grant ${lot.grantNumber}, vest period ${lot.vestPeriod}, ${lot.vestDate}`}
-                    onChange={(event) => onSelection(index, event.currentTarget.checked)}
+                    onChange={(event) => onSelection(key, event.currentTarget.checked)}
                   />
                 </td>
-                <td>{lot.symbol}</td>
-                <td class="numeric-cell">{lot.vestDate}</td>
-                <td>{lot.grantNumber}</td>
-                <td>{lot.vestPeriod}</td>
-                <td class="numeric-cell">{lot.quantity.toFixed()}</td>
-                <td class="numeric-cell">{formatUsd(lot.estimatedCostBasisPerShare)}</td>
-                <td class="numeric-cell">
-                  {price === undefined ? "—" : formatUsd(lot.quantity.times(price))}
-                </td>
-                <td class="numeric-cell">
-                  {price === undefined
-                    ? "—"
-                    : formatUsd(lot.quantity.times(price.minus(lot.estimatedCostBasisPerShare)))}
-                </td>
+                {columns.map((column) => (
+                  <td key={column.label} class={cellClass(column)}>
+                    {column.text(lot, valued)}
+                  </td>
+                ))}
               </tr>
             );
           })}
